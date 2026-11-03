@@ -4,12 +4,12 @@
             "ssh": "Disabled",
             "previewLimit": 50,
             "server": "localhost",
-            "port": 5432,
-            "driver": "PostgreSQL",
-            "name": "PostgreSQL 18",
+            "port": 1433,
+            "driver": "MSSQL",
+            "name": "SQL Server",
             "group": "Servers",
             "database": "WSB_Vehicle_Database",
-            "username": "postgres"
+            "username": "sa"
         }
     ]
 }
