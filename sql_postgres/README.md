@@ -16,6 +16,8 @@ Supabase (PostgreSQL 17) or a local PostgreSQL.
 | `04_import_staging.sql` | Tables and steps for importing the spreadsheets | Run | Run |
 | `05_procedures.sql` | Data-entry functions (`add_trip`, `add_fuel`, ...) | Run | Run |
 | `06_security_tests.sql` | Checks the permissions; every line should say PASS | Run any time | Run any time |
+| `07_web_access.sql` | Web site tiers: adds the "can see driver's licenses" switch | Run | Run |
+| `07b_demo_users.sql` | Fictional sign-in users, one per tier, until the real list arrives | Run (remove later) | Run |
 
 On Supabase, open **SQL Editor → New query**, paste one file, and click **Run**.
 Files 01–05 can be run again at any time; they keep existing data.
