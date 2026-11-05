@@ -2,8 +2,12 @@
 -- Water School Vehicle Management Database  (SQL Server / T-SQL)
 -- File 01: Schema (tables, constraints, indexes, helper functions, triggers)
 -- Run order: 01_schema.sql -> 02_security.sql -> 03_sample_data.sql
--- Safe to re-run on an EMPTY database. It will not drop existing data.
+-- Run on an EMPTY database (see 00_create_database.sql). Tables use plain CREATE TABLE,
+-- so a second run fails with 'already exists' instead of touching your data.
 -- =====================================================================
+
+IF SCHEMA_ID('wsb') IS NULL EXEC('CREATE SCHEMA wsb');
+GO
 
 -- ---------------------------------------------------------------------
 -- Helper: Florida state fiscal year (July 1 - June 30), e.g. 'FY25-26'
@@ -14,6 +18,7 @@ CREATE OR ALTER FUNCTION wsb.fiscal_year
     @d DATE
 )
 RETURNS VARCHAR(8)
+WITH SCHEMABINDING
 AS
 BEGIN
     DECLARE @result VARCHAR(8);
@@ -266,7 +271,7 @@ CREATE TABLE wsb.audit_log (
 );
 GO
 
-CREATE TRIGGER wsb.trg_audit_driver
+CREATE OR ALTER TRIGGER wsb.trg_audit_driver
 ON wsb.driver
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -284,11 +289,12 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
-CREATE TRIGGER wsb.trg_audit_driver_license
+CREATE OR ALTER TRIGGER wsb.trg_audit_driver_license
 ON wsb.driver_license
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -306,11 +312,12 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
-CREATE TRIGGER wsb.trg_audit_driver_qualification
+CREATE OR ALTER TRIGGER wsb.trg_audit_driver_qualification
 ON wsb.driver_qualification
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -328,11 +335,12 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
-CREATE TRIGGER wsb.trg_audit_vehicle
+CREATE OR ALTER TRIGGER wsb.trg_audit_vehicle
 ON wsb.vehicle
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -350,11 +358,12 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
-CREATE TRIGGER wsb.trg_audit_vehicle_document
+CREATE OR ALTER TRIGGER wsb.trg_audit_vehicle_document
 ON wsb.vehicle_document
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -372,11 +381,12 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
-CREATE TRIGGER wsb.trg_audit_invoice
+CREATE OR ALTER TRIGGER wsb.trg_audit_invoice
 ON wsb.invoice
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -394,11 +404,12 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
-CREATE TRIGGER wsb.trg_audit_invoice_line
+CREATE OR ALTER TRIGGER wsb.trg_audit_invoice_line
 ON wsb.invoice_line
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -416,11 +427,12 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
-CREATE TRIGGER wsb.trg_audit_maintenance_record
+CREATE OR ALTER TRIGGER wsb.trg_audit_maintenance_record
 ON wsb.maintenance_record
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -438,11 +450,12 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
-CREATE TRIGGER wsb.trg_audit_fuel_record
+CREATE OR ALTER TRIGGER wsb.trg_audit_fuel_record
 ON wsb.fuel_record
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -460,11 +473,12 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
-CREATE TRIGGER wsb.trg_audit_trip
+CREATE OR ALTER TRIGGER wsb.trg_audit_trip
 ON wsb.trip
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -482,11 +496,12 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
-CREATE TRIGGER wsb.trg_audit_app_user
+CREATE OR ALTER TRIGGER wsb.trg_audit_app_user
 ON wsb.app_user
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -504,12 +519,13 @@ BEGIN
                WHEN EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) THEN (SELECT * FROM inserted FOR JSON PATH)
                WHEN EXISTS (SELECT 1 FROM inserted) THEN (SELECT * FROM inserted FOR JSON PATH)
                ELSE (SELECT * FROM deleted FOR JSON PATH)
-           END;
+           END
+    WHERE EXISTS (SELECT 1 FROM inserted) OR EXISTS (SELECT 1 FROM deleted);
 END;
 GO
 
 -- Keep vehicle.current_mileage up to date when trips/fuel are logged
-CREATE TRIGGER wsb.trg_trip_mileage
+CREATE OR ALTER TRIGGER wsb.trg_trip_mileage
 ON wsb.trip
 AFTER INSERT, UPDATE
 AS
@@ -525,7 +541,7 @@ BEGIN
 END;
 GO
 
-CREATE TRIGGER wsb.trg_fuel_mileage
+CREATE OR ALTER TRIGGER wsb.trg_fuel_mileage
 ON wsb.fuel_record
 AFTER INSERT, UPDATE
 AS

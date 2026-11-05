@@ -1,0 +1,24 @@
+# Confidential fleet data - keep local, never push to GitHub
+databasefiles/
+vehicle_and_maintenance_rule.sql
+supabase_setup.sql
+
+# Passwords / connection strings
+.env
+*.env
+
+# Personal pgAdmin / VS Code query scratch files
+*.session.sql
+
+# Dashboard prototype - local only until the team decides
+dashboard/
+.claude/
+__pycache__/
+
+# Project documents from WSB Project.zip (forms, invoices, insurance) - local only
+project_files/
+*.zip
+
+# Local folder cleanup (diagram + old drafts) - not pushed
+docs/
+old_drafts/

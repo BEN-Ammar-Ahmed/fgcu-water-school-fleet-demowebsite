@@ -1,0 +1,11 @@
+-- =====================================================================
+-- File 00: Create the database   PostgreSQL (local only)
+-- NOT needed on Supabase: every Supabase project already has its database
+-- (called "postgres"). Skip straight to 01_schema.sql there.
+--
+-- Local PostgreSQL: run this once while connected to the default "postgres"
+-- database (pgAdmin: Query Tool on "postgres"), then connect to
+-- water_school_fleet and run 01_schema.sql. The dashboard uses this name
+-- by default when no Supabase connection is set.
+-- =====================================================================
+CREATE DATABASE water_school_fleet;
