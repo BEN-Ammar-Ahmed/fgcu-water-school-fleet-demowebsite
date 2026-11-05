@@ -1,171 +1,196 @@
 -- =====================================================================
--- File 04: Import from existing spreadsheets (staging tables + transforms)
--- Pattern:  CSV  ->  stg_* table (all TEXT, never fails)  ->  clean INSERT into real tables
--- Why: spreadsheets are messy (blank rows, "$1,234.50", 10/3 with no year).
+-- File 04: Import from existing spreadsheets (staging + transforms)   SQL Server
+-- Pattern:  CSV -> stg_* table (all text, never fails) -> clean INSERT into real tables
+-- Why: spreadsheets are messy (blank rows, "$1,234.50", "10-03" with no year).
 --      Staging lets you load first, LOOK, fix, then move clean rows across.
 --
--- Run once to create the staging tables. Then for each source:
---   1. Excel: File > Save As > CSV UTF-8, one sheet at a time, header row on row 1.
---   2. pgAdmin: right-click the stg_ table > Import/Export Data > Import, header = Yes.
---      (or VS Code terminal:  \copy wsb.stg_mileage_log FROM 'file.csv' CSV HEADER)
---   3. Fill stg_vehicle_map (see below), run the matching TRANSFORM block.
---   4. TRUNCATE the stg_ table when done.
+-- Steps for each source:
+--   1. Excel: File > Save As > CSV UTF-8, one sheet at a time, header on row 1.
+--      For the WEX date column, format the cells as TEXT first (so 10-03 stays 10-03).
+--   2. Load the CSV into the matching stg_ table. Either
+--        a) SQL Server Management Studio / Azure Data Studio: right-click the database >
+--           Tasks > Import Flat File (columns must already be text), or
+--        b) BULK INSERT (the path must be readable BY THE SQL SERVER machine):
+--             BULK INSERT wsb.stg_mileage_log FROM 'C:\wsb\mileage_log.csv'
+--             WITH (FORMAT = 'CSV', FIRSTROW = 2, CODEPAGE = '65001');
+--   3. Fill wsb.stg_vehicle_map once (spreadsheet vehicle name -> asset number).
+--   4. Run the matching TRANSFORM block, then the checks, then TRUNCATE the stg_ table.
+-- Run as sa / db_owner. Remove the DEMO data first (bottom of 03_sample_data.sql).
 -- =====================================================================
-SET search_path TO wsb, public;
+SET NOCOUNT ON;
+GO
 
--- Year to apply to WEX rows (the Purchase Activity Report prints MM-DD only)
-CREATE TABLE IF NOT EXISTS stg_params (import_year INT);
--- INSERT INTO stg_params VALUES (2026);   -- <-- set before running WEX transform
+IF OBJECT_ID('wsb.stg_params') IS NULL
+    CREATE TABLE wsb.stg_params (import_year INT NOT NULL);   -- WEX report prints MM-DD only
+GO
+-- INSERT INTO wsb.stg_params VALUES (2026);                  -- <-- set before the WEX transform
 
--- Maps the free-text vehicle names used in spreadsheets to real vehicles.
--- Fill it by hand ONCE: 'Ford F250 white', 'Skiff 1', 'Truck 2' ... -> asset number.
-CREATE TABLE IF NOT EXISTS stg_vehicle_map (
-    vehicle_text  TEXT PRIMARY KEY,
-    asset_number  VARCHAR(20) NOT NULL REFERENCES vehicle(asset_number)
-);
+IF OBJECT_ID('wsb.stg_vehicle_map') IS NULL
+    CREATE TABLE wsb.stg_vehicle_map (
+        vehicle_text  NVARCHAR(200) NOT NULL PRIMARY KEY,
+        asset_number  VARCHAR(20)   NOT NULL REFERENCES wsb.vehicle(asset_number)
+    );
+GO
+-- Example:  INSERT INTO wsb.stg_vehicle_map VALUES ('Ford F250 white', 'WS-T01'), ('Skiff 1', 'WS-B01');
 
 -- ---------------------------------------------------------------------
--- SOURCE 1: FLEET_MILEAGE_LOG.xlsx  ("State Audited Vehicle Log")
+-- SOURCE 1: FLEET_MILEAGE_LOG.xlsx ("State Audited Vehicle Log")
 -- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS stg_mileage_log (
-    vehicle_text TEXT, date_out TEXT, time_out TEXT, mileage_out TEXT, mileage_in TEXT,
-    destination TEXT, full_name TEXT, purpose TEXT, date_return TEXT, time_return TEXT,
-    gas_station TEXT, amount TEXT
-);
+IF OBJECT_ID('wsb.stg_mileage_log') IS NULL
+    CREATE TABLE wsb.stg_mileage_log (
+        vehicle_text NVARCHAR(200), date_out NVARCHAR(30), time_out NVARCHAR(30),
+        mileage_out NVARCHAR(30), mileage_in NVARCHAR(30), destination NVARCHAR(200),
+        full_name NVARCHAR(100), purpose NVARCHAR(200), date_return NVARCHAR(30),
+        time_return NVARCHAR(30), gas_station NVARCHAR(100), amount NVARCHAR(30)
+    );
+GO
 
--- TRANSFORM 1 -> trip  (fuel amounts are NOT imported here; use WEX data to avoid double counting)
--- Dates must be YYYY-MM-DD or M/D/YYYY. Rows whose vehicle or driver cannot be matched are skipped:
--- check them with the query under the INSERT.
-INSERT INTO trip (vehicle_id, driver_id, start_datetime, end_datetime, starting_mileage, ending_mileage, destination, purpose)
+-- TRANSFORM 1 -> trip.  Fuel amounts are NOT imported from the log (use WEX data
+-- instead, to avoid counting the same fill twice).
+INSERT INTO wsb.trip (vehicle_id, driver_id, start_datetime, end_datetime, starting_mileage, ending_mileage, destination, purpose)
 SELECT v.vehicle_id, d.driver_id,
-       (s.date_out || ' ' || COALESCE(NULLIF(s.time_out,''),'00:00'))::TIMESTAMP,
-       NULLIF(s.date_return || ' ' || COALESCE(NULLIF(s.time_return,''),'00:00'),' 00:00')::TIMESTAMP,
-       NULLIF(regexp_replace(s.mileage_out,'[^0-9]','','g'),'')::INT,
-       NULLIF(regexp_replace(s.mileage_in ,'[^0-9]','','g'),'')::INT,
+       TRY_CONVERT(DATETIME2, s.date_out + ' ' + COALESCE(NULLIF(s.time_out, ''), '00:00')),
+       CASE WHEN NULLIF(LTRIM(RTRIM(s.date_return)), '') IS NULL THEN NULL
+            ELSE TRY_CONVERT(DATETIME2, s.date_return + ' ' + COALESCE(NULLIF(s.time_return, ''), '00:00')) END,
+       TRY_CONVERT(INT, REPLACE(REPLACE(s.mileage_out, ',', ''), ' ', '')),
+       TRY_CONVERT(INT, REPLACE(REPLACE(s.mileage_in,  ',', ''), ' ', '')),
        s.destination, s.purpose
-FROM stg_mileage_log s
-JOIN stg_vehicle_map m ON m.vehicle_text = s.vehicle_text
-JOIN vehicle v ON v.asset_number = m.asset_number
-JOIN driver d  ON lower(d.first_name || ' ' || d.last_name) = lower(trim(s.full_name))
-WHERE NULLIF(trim(s.date_out),'') IS NOT NULL;
-
--- Rows that did NOT import (fix the map or add the driver, then re-run only those):
--- SELECT s.* FROM stg_mileage_log s
--- LEFT JOIN stg_vehicle_map m ON m.vehicle_text = s.vehicle_text
--- LEFT JOIN driver d ON lower(d.first_name||' '||d.last_name) = lower(trim(s.full_name))
--- WHERE m.vehicle_text IS NULL OR d.driver_id IS NULL;
+FROM wsb.stg_mileage_log AS s
+JOIN wsb.stg_vehicle_map AS m ON m.vehicle_text = s.vehicle_text
+JOIN wsb.vehicle AS v ON v.asset_number = m.asset_number
+JOIN wsb.driver  AS d ON LOWER(d.first_name + ' ' + d.last_name) = LOWER(LTRIM(RTRIM(s.full_name)))
+WHERE TRY_CONVERT(DATETIME2, s.date_out + ' 00:00') IS NOT NULL;
+GO
+-- Rows that did NOT import (fix the map or add the driver, then re-run for those rows only):
+-- SELECT s.* FROM wsb.stg_mileage_log s
+-- LEFT JOIN wsb.stg_vehicle_map m ON m.vehicle_text = s.vehicle_text
+-- LEFT JOIN wsb.driver d ON LOWER(d.first_name + ' ' + d.last_name) = LOWER(LTRIM(RTRIM(s.full_name)))
+-- WHERE m.vehicle_text IS NULL OR d.driver_id IS NULL OR TRY_CONVERT(DATETIME2, s.date_out + ' 00:00') IS NULL;
 
 -- ---------------------------------------------------------------------
--- SOURCE 2: WEX Purchase Activity Report  (export as CSV/Excel from the WEX portal)
--- One row per fuel transaction. The vehicle/asset identifier is printed above each group;
--- copy it down into every row in Excel before saving as CSV.
+-- SOURCE 2: WEX Purchase Activity Report (CSV/Excel export from the WEX portal)
+-- One row per fuel transaction. The vehicle/asset identifier is printed above each
+-- group in the report: copy it down into every row before saving the CSV.
+-- tran_date_mmdd must look like 10-03 (MM-DD, two digits each).
 -- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS stg_wex_activity (
-    asset_identifier TEXT, tran_date_mmdd TEXT, tran_time TEXT, site_address TEXT, ticket_number TEXT,
-    tran_code TEXT, odometer TEXT, product TEXT, units TEXT, cost_per_unit TEXT,
-    fuel_amount TEXT, other_amount TEXT, exempt_tax TEXT, net_amount TEXT, reported_tax TEXT
-);
+IF OBJECT_ID('wsb.stg_wex_activity') IS NULL
+    CREATE TABLE wsb.stg_wex_activity (
+        asset_identifier NVARCHAR(200), tran_date_mmdd NVARCHAR(10), tran_time NVARCHAR(20),
+        site_address NVARCHAR(200), ticket_number NVARCHAR(30), tran_code NVARCHAR(10),
+        odometer NVARCHAR(30), product NVARCHAR(30), units NVARCHAR(30), cost_per_unit NVARCHAR(30),
+        fuel_amount NVARCHAR(30), other_amount NVARCHAR(30), exempt_tax NVARCHAR(30),
+        net_amount NVARCHAR(30), reported_tax NVARCHAR(30)
+    );
+GO
 
--- TRANSFORM 2a -> invoice + invoice_line + fuel_record
--- First create (or look up) the monthly WEX statement as an invoice (see manual), then:
--- replace 'WEX-INVOICE-NUMBER' below with its invoice_number.
-WITH clean AS (
+-- Step 2.0: create the monthly WEX statement as an invoice (edit the values from the
+-- Invoice Statement page: invoice number, closing date, due date, amount due):
+-- INSERT INTO wsb.invoice (invoice_number, invoice_type, vendor, invoice_date, payment_due_date, total_amount, funding_source, account_number_last4)
+-- VALUES ('<WEX INVOICE NUMBER>', 'WEX Statement', 'WEX Bank', '2026-10-15', '2026-11-05', 0.00, 'Fleet Fuel Account', '0000');
+
+-- TRANSFORM 2 -> invoice_line + fuel_record.  Edit @wex_invoice, then run the whole block.
+DECLARE @wex_invoice VARCHAR(40) = '<WEX INVOICE NUMBER>';
+DECLARE @year INT = (SELECT TOP 1 import_year FROM wsb.stg_params);
+DECLARE @invoice_id INT = (SELECT invoice_id FROM wsb.invoice WHERE invoice_number = @wex_invoice AND vendor = 'WEX Bank');
+
+IF @invoice_id IS NULL OR @year IS NULL
+    RAISERROR('Create the WEX invoice (step 2.0) and set stg_params first.', 16, 1);
+ELSE
+BEGIN
+    -- cleaned rows
     SELECT v.vehicle_id,
-           make_date((SELECT import_year FROM stg_params LIMIT 1),
-                     split_part(s.tran_date_mmdd,'-',1)::INT, split_part(s.tran_date_mmdd,'-',2)::INT) AS fuel_date,
-           NULLIF(s.tran_time,'')::TIME AS fuel_time,
-           NULLIF(regexp_replace(s.odometer,'[^0-9]','','g'),'')::INT AS mileage,
-           NULLIF(regexp_replace(s.units,'[^0-9.]','','g'),'')::NUMERIC AS gallons,
-           NULLIF(regexp_replace(s.cost_per_unit,'[^0-9.]','','g'),'')::NUMERIC AS cpu,
-           COALESCE(NULLIF(regexp_replace(s.fuel_amount,'[^0-9.\-]','','g'),'')::NUMERIC,0) AS fuel_amt,
-           COALESCE(NULLIF(regexp_replace(s.other_amount,'[^0-9.\-]','','g'),'')::NUMERIC,0) AS other_amt,
-           s.product, s.site_address, s.ticket_number, s.tran_code
-    FROM stg_wex_activity s
-    JOIN stg_vehicle_map m ON m.vehicle_text = s.asset_identifier
-    JOIN vehicle v ON v.asset_number = m.asset_number
-),
-lines AS (
-    INSERT INTO invoice_line (invoice_id, vehicle_id, line_date, category, description, amount)
-    SELECT (SELECT invoice_id FROM invoice WHERE invoice_number = 'WEX-INVOICE-NUMBER' AND vendor = 'WEX Bank'),
-           c.vehicle_id, c.fuel_date, 'Fuel', 'WEX ticket ' || c.ticket_number, c.fuel_amt + c.other_amt
-    FROM clean c
-    RETURNING line_id, vehicle_id, line_date, amount
-)
-SELECT count(*) AS lines_created FROM lines;
--- NOTE: the fuel_record rows are created in step 2b so each one can point at its invoice_line.
+           DATEFROMPARTS(@year, TRY_CONVERT(INT, LEFT(s.tran_date_mmdd, 2)), TRY_CONVERT(INT, RIGHT(s.tran_date_mmdd, 2))) AS fuel_date,
+           TRY_CONVERT(TIME, NULLIF(s.tran_time, ''))                                              AS fuel_time,
+           TRY_CONVERT(INT, REPLACE(REPLACE(s.odometer, ',', ''), ' ', ''))                         AS mileage,
+           TRY_CONVERT(DECIMAL(8,3), REPLACE(s.units, ',', ''))                                     AS gallons,
+           TRY_CONVERT(DECIMAL(7,3), REPLACE(REPLACE(s.cost_per_unit, '$', ''), ',', ''))           AS cost_per_unit,
+           COALESCE(TRY_CONVERT(DECIMAL(10,2), REPLACE(REPLACE(s.fuel_amount,  '$', ''), ',', '')), 0) AS fuel_amt,
+           COALESCE(TRY_CONVERT(DECIMAL(10,2), REPLACE(REPLACE(s.other_amount, '$', ''), ',', '')), 0) AS other_amt,
+           s.product, s.site_address, s.ticket_number, UPPER(LTRIM(RTRIM(s.tran_code))) AS tran_code
+    INTO #wex
+    FROM wsb.stg_wex_activity AS s
+    JOIN wsb.stg_vehicle_map AS m ON m.vehicle_text = s.asset_identifier
+    JOIN wsb.vehicle AS v ON v.asset_number = m.asset_number;
 
--- TRANSFORM 2b -> fuel_record linked to the lines created above (matches on vehicle + date + amount)
-INSERT INTO fuel_record (vehicle_id, invoice_line_id, fuel_date, fuel_time, mileage, gallons, cost_per_unit,
-                         total_cost, other_cost, product, site_address, ticket_number, wex_tran_code, source)
-SELECT v.vehicle_id, l.line_id,
-       make_date((SELECT import_year FROM stg_params LIMIT 1), split_part(s.tran_date_mmdd,'-',1)::INT, split_part(s.tran_date_mmdd,'-',2)::INT),
-       NULLIF(s.tran_time,'')::TIME,
-       NULLIF(regexp_replace(s.odometer,'[^0-9]','','g'),'')::INT,
-       NULLIF(regexp_replace(s.units,'[^0-9.]','','g'),'')::NUMERIC,
-       NULLIF(regexp_replace(s.cost_per_unit,'[^0-9.]','','g'),'')::NUMERIC,
-       COALESCE(NULLIF(regexp_replace(s.fuel_amount,'[^0-9.\-]','','g'),'')::NUMERIC,0),
-       COALESCE(NULLIF(regexp_replace(s.other_amount,'[^0-9.\-]','','g'),'')::NUMERIC,0),
-       s.product, s.site_address, s.ticket_number,
-       (SELECT code FROM wex_code WHERE code = upper(trim(s.tran_code))),
-       'WEX Import'
-FROM stg_wex_activity s
-JOIN stg_vehicle_map m ON m.vehicle_text = s.asset_identifier
-JOIN vehicle v ON v.asset_number = m.asset_number
-JOIN invoice_line l ON l.vehicle_id = v.vehicle_id
-     AND l.description = 'WEX ticket ' || s.ticket_number
-JOIN invoice i ON i.invoice_id = l.invoice_id AND i.invoice_number = 'WEX-INVOICE-NUMBER';
+    INSERT INTO wsb.invoice_line (invoice_id, vehicle_id, line_date, category, description, amount)
+    SELECT @invoice_id, vehicle_id, fuel_date, 'Fuel', 'WEX ticket ' + ticket_number, fuel_amt + other_amt
+    FROM #wex;
+
+    INSERT INTO wsb.fuel_record (vehicle_id, invoice_line_id, fuel_date, fuel_time, mileage, gallons, cost_per_unit,
+                                 total_cost, other_cost, product, site_address, ticket_number, wex_tran_code, source)
+    SELECT w.vehicle_id, l.line_id, w.fuel_date, w.fuel_time, w.mileage, w.gallons, w.cost_per_unit,
+           w.fuel_amt, w.other_amt, w.product, w.site_address, w.ticket_number,
+           (SELECT c.code FROM wsb.wex_code AS c WHERE c.code = w.tran_code), 'WEX Import'
+    FROM #wex AS w
+    JOIN wsb.invoice_line AS l ON l.invoice_id = @invoice_id AND l.vehicle_id = w.vehicle_id
+                              AND l.description = 'WEX ticket ' + w.ticket_number;
+
+    DROP TABLE #wex;
+END;
+GO
+-- Tip: if a ticket number repeats for the same vehicle, the join above returns two fuel
+-- rows per ticket. Check:  SELECT ticket_number, COUNT(*) FROM wsb.fuel_record GROUP BY ticket_number HAVING COUNT(*) > 1;
 
 -- ---------------------------------------------------------------------
--- SOURCE 3: Vehicle and Boat Maintenance sheet (FY tabs)
+-- SOURCE 3: Vehicle and Boat Maintenance sheet (one tab per fiscal year)
 -- Columns: Date | Purchaser | Vehicle/Vessel | Repair items | Vendor | Funding source/account | Cost | Total Cost | P-Card WorkDay #
--- Do NOT load the "TOTAL SPENT" column - the database calculates totals (v_cost_by_vehicle_fy).
+-- Do NOT load "TOTAL SPENT": the database calculates totals (v_cost_by_vehicle_fy).
 -- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS stg_maintenance_sheet (
-    entry_date TEXT, purchaser TEXT, vehicle_text TEXT, repair_items TEXT, vendor TEXT,
-    funding_source TEXT, cost TEXT, total_cost TEXT, pcard_workday_no TEXT
-);
+IF OBJECT_ID('wsb.stg_maintenance_sheet') IS NULL
+    CREATE TABLE wsb.stg_maintenance_sheet (
+        entry_date NVARCHAR(30), purchaser NVARCHAR(100), vehicle_text NVARCHAR(200),
+        repair_items NVARCHAR(MAX), vendor NVARCHAR(100), funding_source NVARCHAR(100),
+        cost NVARCHAR(30), total_cost NVARCHAR(30), pcard_workday_no NVARCHAR(50)
+    );
+GO
 
--- TRANSFORM 3: one invoice per sheet row (the sheet has no invoice numbers), one line, one maintenance record.
--- invoice_number is generated as 'SHEET-<date>-<row>' so it is unique and traceable.
-WITH numbered AS (
-    SELECT row_number() OVER () AS rn, s.*,
-           NULLIF(regexp_replace(s.cost,'[^0-9.\-]','','g'),'')::NUMERIC AS cost_n,
-           s.entry_date::DATE AS d
-    FROM stg_maintenance_sheet s
-    WHERE NULLIF(trim(s.entry_date),'') IS NOT NULL AND NULLIF(trim(s.cost),'') IS NOT NULL
-),
-inv AS (
-    INSERT INTO invoice (invoice_number, invoice_type, vendor, invoice_date, total_amount, funding_source, pcard_workday_no, purchaser)
-    SELECT 'SHEET-' || to_char(n.d,'YYYYMMDD') || '-' || n.rn, 'Maintenance',
-           COALESCE(NULLIF(trim(n.vendor),''),'Unknown'), n.d, n.cost_n,
-           n.funding_source, n.pcard_workday_no, n.purchaser
-    FROM numbered n
-    RETURNING invoice_id, invoice_number
-),
-ln AS (
-    INSERT INTO invoice_line (invoice_id, vehicle_id, line_date, category, description, amount)
-    SELECT i.invoice_id, v.vehicle_id, n.d, 'Repair', n.repair_items, n.cost_n
-    FROM numbered n
-    JOIN inv i ON i.invoice_number = 'SHEET-' || to_char(n.d,'YYYYMMDD') || '-' || n.rn
-    LEFT JOIN stg_vehicle_map m ON m.vehicle_text = n.vehicle_text
-    LEFT JOIN vehicle v ON v.asset_number = m.asset_number
-    RETURNING line_id, vehicle_id, line_date, description, amount
-)
-SELECT count(*) AS lines_created, count(*) FILTER (WHERE vehicle_id IS NULL) AS lines_missing_vehicle FROM ln;
--- Lines with a NULL vehicle_id mean a name is missing from stg_vehicle_map: add it, then
--- UPDATE invoice_line SET vehicle_id = ... for those lines (query v_invoice_reconciliation / filter vehicle_id IS NULL).
+-- TRANSFORM 3: one invoice per sheet row (the sheet has no invoice numbers), one line,
+-- one maintenance record. invoice_number = 'SHEET-<yyyymmdd>-<row>' so it is unique and traceable.
+SELECT IDENTITY(INT, 1, 1) AS rn,
+       TRY_CONVERT(DATE, s.entry_date) AS d,
+       TRY_CONVERT(DECIMAL(10,2), REPLACE(REPLACE(s.cost, '$', ''), ',', '')) AS cost_n,
+       s.purchaser, s.vehicle_text, s.repair_items,
+       COALESCE(NULLIF(LTRIM(RTRIM(s.vendor)), ''), 'Unknown') AS vendor,
+       s.funding_source, s.pcard_workday_no
+INTO #m
+FROM wsb.stg_maintenance_sheet AS s
+WHERE TRY_CONVERT(DATE, s.entry_date) IS NOT NULL
+  AND TRY_CONVERT(DECIMAL(10,2), REPLACE(REPLACE(s.cost, '$', ''), ',', '')) IS NOT NULL;
 
--- Optional: create maintenance_record rows from the repair lines
-INSERT INTO maintenance_record (vehicle_id, invoice_line_id, service_date, service_type, cost, vendor, description)
-SELECT l.vehicle_id, l.line_id, l.line_date, 'Repair', l.amount, i.vendor, l.description
-FROM invoice_line l JOIN invoice i USING (invoice_id)
+INSERT INTO wsb.invoice (invoice_number, invoice_type, vendor, invoice_date, total_amount, funding_source, pcard_workday_no, purchaser)
+SELECT 'SHEET-' + CONVERT(VARCHAR(8), d, 112) + '-' + CAST(rn AS VARCHAR(10)), 'Maintenance',
+       vendor, d, cost_n, funding_source, pcard_workday_no, purchaser
+FROM #m;
+
+INSERT INTO wsb.invoice_line (invoice_id, vehicle_id, line_date, category, description, amount)
+SELECT i.invoice_id, v.vehicle_id, m.d, 'Repair', m.repair_items, m.cost_n
+FROM #m AS m
+JOIN wsb.invoice AS i ON i.invoice_number = 'SHEET-' + CONVERT(VARCHAR(8), m.d, 112) + '-' + CAST(m.rn AS VARCHAR(10))
+LEFT JOIN wsb.stg_vehicle_map AS sm ON sm.vehicle_text = m.vehicle_text
+LEFT JOIN wsb.vehicle AS v ON v.asset_number = sm.asset_number;
+
+-- Lines with a NULL vehicle_id mean a vehicle name is missing from stg_vehicle_map:
+-- add it, then  UPDATE wsb.invoice_line SET vehicle_id = ... WHERE vehicle_id IS NULL AND ...
+SELECT COUNT(*) AS lines_missing_vehicle
+FROM wsb.invoice_line AS l JOIN wsb.invoice AS i ON i.invoice_id = l.invoice_id
+WHERE i.invoice_number LIKE 'SHEET-%' AND l.vehicle_id IS NULL;
+
+-- Create maintenance_record rows from the repair lines
+INSERT INTO wsb.maintenance_record (vehicle_id, invoice_line_id, service_date, service_type, cost, vendor, description)
+SELECT l.vehicle_id, l.line_id, l.line_date, 'Repair', l.amount, LEFT(i.vendor, 50), l.description
+FROM wsb.invoice_line AS l
+JOIN wsb.invoice AS i ON i.invoice_id = l.invoice_id
 WHERE i.invoice_number LIKE 'SHEET-%' AND l.vehicle_id IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM maintenance_record mr WHERE mr.invoice_line_id = l.line_id);
+  AND NOT EXISTS (SELECT 1 FROM wsb.maintenance_record AS mr WHERE mr.invoice_line_id = l.line_id);
+
+DROP TABLE #m;
+GO
 
 -- ---------------------------------------------------------------------
--- AFTER IMPORT: sanity checks
+-- AFTER IMPORT: sanity checks, then clean up
 -- ---------------------------------------------------------------------
--- SELECT count(*) FROM trip; SELECT count(*) FROM fuel_record; SELECT count(*) FROM invoice;
--- SELECT * FROM v_invoice_reconciliation WHERE unassigned_difference <> 0;
--- SELECT * FROM invoice_line WHERE vehicle_id IS NULL AND category <> 'Fee';
--- TRUNCATE stg_mileage_log, stg_wex_activity, stg_maintenance_sheet;
+-- SELECT COUNT(*) FROM wsb.trip; SELECT COUNT(*) FROM wsb.fuel_record; SELECT COUNT(*) FROM wsb.invoice;
+-- SELECT * FROM wsb.v_invoice_reconciliation WHERE unassigned_difference <> 0;
+-- SELECT * FROM wsb.invoice_line WHERE vehicle_id IS NULL AND category <> 'Fee';
+-- TRUNCATE TABLE wsb.stg_mileage_log; TRUNCATE TABLE wsb.stg_wex_activity; TRUNCATE TABLE wsb.stg_maintenance_sheet;
+GO
