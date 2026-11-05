@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% from '_icons.html' import icon %}
+{% block bodyclass %}admin-page{% endblock %}
+{% block body %}
+<div class="admin-layout">
+  <nav class="admin-side" aria-label="Admin">
+    <h4>Admin</h4>
+    <a href="{{ url_for('admin.overview') }}" class="{{ 'on' if section == 'overview' }}">Overview</a>
+    <a href="{{ url_for('admin.people') }}" class="{{ 'on' if section in ('people', 'add_person') }}">People &amp; access</a>
+    {% if 'admin.activity' in url_map_endpoints %}<a href="{{ url_for('admin.activity') }}" class="{{ 'on' if section == 'activity' }}">Activity</a>{% endif %}
+    {% if 'admin.data' in url_map_endpoints %}<a href="{{ url_for('admin.data') }}" class="{{ 'on' if section == 'data' }}">Manage data</a>{% endif %}
+    <h4>Site</h4>
+    <a href="{{ url_for('dashboard') }}">&larr; Back to search</a>
+  </nav>
+  <div class="admin-main">{% block admin %}{% endblock %}</div>
+</div>
+{% endblock %}

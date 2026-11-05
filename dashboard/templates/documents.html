@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Documents{% endblock %}
+{% block body %}
+<div class="head"><h1>Documents <span class="muted">({{ rows|length }})</span></h1></div>
+<p class="muted small">You only see documents your access tier is allowed to open.
+  {% if user.can_edit %}To upload, open a vehicle and use the upload box in its Documents section.{% endif %}</p>
+<section class="card flush">
+<table class="list">
+  <thead><tr><th>Type</th><th>Vehicle</th><th>File</th><th>Expires</th><th>Who can see</th></tr></thead>
+  <tbody>
+  {% for d in rows %}
+    <tr>
+      <td>{{ d.document_type }}</td>
+      <td><a href="{{ url_for('vehicle', vid=d.vehicle_id) }}">{{ display_name({'notes': d.vnotes, 'vehicle_id': d.vehicle_id, 'make': d.make, 'model': d.model, 'year': d.year}) }}</a></td>
+      <td><a href="{{ url_for('doc_file', did=d.document_id) }}" target="_blank">{{ d.file_location.split('/')[-1] }}</a></td>
+      <td>{{ d.expiration_date.strftime('%b %d, %Y') if d.expiration_date else '—' }}</td>
+      <td><span class="badge">{{ d.access_level }}</span></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">No documents yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</section>
+{% endblock %}

@@ -1,6 +1,6 @@
 -- =====================================================================
 -- File 05: Data-entry functions   PostgreSQL / Supabase
--- PostgreSQL version of sql/05_procedures.sql. Run AFTER 01-03.
+-- PostgreSQL version of ../05_procedures.sql. Run AFTER 01-03.
 -- These are the "forms" for adding data: one call per task, with validation and
 -- plain-English error messages, so people do not have to write raw INSERTs.
 -- Staff and Admin can run them; Read-only cannot. Safe to re-run.

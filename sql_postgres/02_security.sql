@@ -1,6 +1,6 @@
 -- =====================================================================
 -- File 02: Security  (roles, permissions, row-level security)   PostgreSQL / Supabase
--- PostgreSQL version of sql/02_security.sql. Run AFTER 01_schema.sql as the
+-- PostgreSQL version of ../02_security.sql. Run AFTER 01_schema.sql as the
 -- database owner (on Supabase: the SQL Editor, or the postgres login).
 --
 -- Three tiers (from the project proposal):

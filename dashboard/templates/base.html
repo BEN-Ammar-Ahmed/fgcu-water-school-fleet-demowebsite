@@ -1,0 +1,45 @@
+{% from '_icons.html' import icon %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Fleet{% endblock %} · Water School Fleet</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{% block bodyclass %}{% endblock %}">
+{% if user %}
+<header class="topbar">
+  <a class="brand" href="{{ url_for('dashboard') }}"><span class="logo" aria-hidden="true">WS</span> Water School Fleet</a>
+  <div class="topsearch">{% block topsearch %}
+    <form class="topsearch-form" action="{{ url_for('search_page') }}" method="get" role="search">
+      {{ icon('search', 16) }}<input type="search" name="q" aria-label="Search the fleet" placeholder="Search the fleet  ( / )">
+    </form>{% endblock %}</div>
+  <nav class="topnav">
+    {% if user.can_edit %}
+    <details class="menu" id="add-menu">
+      <summary class="btn">{{ icon('plus', 16) }} Add</summary>
+      <div class="menu-list">
+        <a href="{{ url_for('vehicle_new') }}">Vehicle</a>
+        <a href="{{ url_for('trip_new') }}">Trip</a>
+        <a href="{{ url_for('fuel_new') }}">Fuel</a>
+        <a href="{{ url_for('maintenance_new') }}">Maintenance</a>
+        {% if user.is_admin %}<a href="{{ url_for('driver_new') }}">Driver</a>{% endif %}
+      </div>
+    </details>
+    {% endif %}
+    {% if user.is_admin %}<a class="navlink" href="/admin">{{ icon('admin', 18) }} Admin</a>{% endif %}
+    <a class="navlink" href="{{ url_for('help_page') }}">{{ icon('help', 18) }} Help</a>
+    <span class="who"><span class="who-name">{{ user.full_name }}</span> <span class="badge">{{ user.tier_label }}</span></span>
+    <a class="navlink" href="{{ url_for('logout') }}" title="Sign out">{{ icon('logout', 18) }}<span class="sr">Sign out</span></a>
+  </nav>
+</header>
+{% endif %}
+<main class="page">
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+    <div class="flash flash-{{ cat }} flash {{ cat }}" role="status">{{ msg }}</div>
+  {% endfor %}
+  {% block body %}{% endblock %}
+</main>
+{% block scripts %}<script src="{{ url_for('static', filename='search.js') }}"></script>{% endblock %}
+</body>
+</html>

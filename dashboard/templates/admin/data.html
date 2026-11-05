@@ -1,0 +1,21 @@
+{% extends 'admin/layout.html' %}
+{% from '_icons.html' import icon %}
+{% block title %}Manage data{% endblock %}
+{% block admin %}
+<h1>Manage data</h1>
+<p class="muted">Open any list to view, edit or delete records, or add new ones. Every change is recorded in Activity.</p>
+
+<div class="stat-grid">
+  {% for kind, label, count, add in cards %}
+  <div class="stat">
+    <div class="l">{{ label }}{% if kind == 'licenses' %} <span class="badge badge-dark">Confidential</span>{% endif %}</div>
+    <div class="n" data-count="{{ kind }}">{{ '{:,}'.format(count) }}</div>
+    <div class="s actions">
+      <a class="btn tiny ghost" href="{{ url_for('search_page', kind=kind, browse=1) }}">Open list</a>
+      {% if add %}<a class="btn tiny" href="{{ url_for(add) }}">{{ icon('plus', 14) }} Add</a>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<p class="muted small">Documents are added from a vehicle's page (Documents section). Spreadsheet upload is coming in a later update.</p>
+{% endblock %}

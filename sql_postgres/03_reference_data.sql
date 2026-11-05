@@ -1,6 +1,6 @@
 -- =====================================================================
 -- File 03: Reference data   PostgreSQL / Supabase
--- PART A of sql/03_sample_data.sql: real lookup rows that every database needs.
+-- PART A of ../03_sample_data.sql: real lookup rows that every database needs.
 -- Run AFTER 01 and 02. Safe on the real Supabase database and safe to re-run.
 -- (The fictional demo rows from PART B are in 03b_demo_data.sql.)
 -- =====================================================================

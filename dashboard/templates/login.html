@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Sign in{% endblock %}
+{% block body %}
+<div class="login">
+  <h1>Water School Fleet</h1>
+  <p class="muted">Sign in with your FGCU account.</p>
+  <p><a class="btn btn-primary" href="{{ url_for('login_fgcu', next=next) }}">Sign in with FGCU</a></p>
+  <p class="muted small">FGCU sign-in will be connected by FGCU IT. Until then this opens a demo sign-in.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% from '_icons.html' import icon %}
+{% block title %}{{ d.first_name }} {{ d.last_name }}{% endblock %}
+{% block body %}
+<div class="head">
+  <div>
+    <h1>{{ d.first_name }} {{ d.last_name }}</h1>
+    <p class="muted">{{ d.driver_type or 'Driver' }}{% if d.department %} · {{ d.department }}{% endif %}
+      · <span class="badge">{{ 'Approved' if d.approved else 'Not approved' }}</span>
+      {% if not d.active %}<span class="badge">Inactive</span>{% endif %}</p>
+  </div>
+  {% if user.can_edit %}<a class="btn" href="{{ url_for('driver_edit', did=d.driver_id) }}">{{ icon('edit', 16) }} Edit</a>{% endif %}
+</div>
+
+<section class="card">
+  <h2>Details</h2>
+  <dl class="facts"><dt>Email</dt><dd>{{ d.email or '—' }}</dd></dl>
+</section>
+
+<section class="card">
+  <h2>{{ icon('lock', 16) }} Driver's license</h2>
+  {% if licenses %}
+  <table class="table">
+    <thead><tr><th>Number</th><th>State</th><th>Expires</th><th>Verified</th></tr></thead>
+    <tbody>{% for l in licenses %}
+      <tr><td class="mono">{{ l.license_number or '—' }}</td><td>{{ l.state or '—' }}</td>
+          <td>{{ l.expiration_date.strftime('%b %d, %Y') if l.expiration_date else '—' }}</td>
+          <td>{% if l.verified_date %}{{ l.verified_date.strftime('%b %d, %Y') }}{% if l.verified_by %} by {{ l.verified_by }}{% endif %}{% else %}—{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% else %}<p class="muted">No license on file.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Training and approvals</h2>
+  {% if quals %}
+  <table class="table">
+    <thead><tr><th>Item</th><th>Completed</th><th>Expires</th></tr></thead>
+    <tbody>{% for x in quals %}
+      <tr><td>{{ x.qualification_type }}</td><td>{{ x.completed_date.strftime('%b %d, %Y') if x.completed_date else '—' }}</td>
+          <td>{{ x.expiration_date.strftime('%b %d, %Y') if x.expiration_date else '—' }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% else %}<p class="muted">Nothing recorded.</p>{% endif %}
+</section>
+{% endblock %}

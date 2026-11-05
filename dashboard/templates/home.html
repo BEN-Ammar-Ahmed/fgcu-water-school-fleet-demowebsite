@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% from '_icons.html' import icon, vehicle_icon %}
+{% block title %}{{ 'Search: ' ~ q if searched else 'Search' }}{% endblock %}
+{% block bodyclass %}{{ 'searched' if searched else 'home' }}{% endblock %}
+{% block topsearch %}{% endblock %}
+
+{% macro chips() %}
+<nav class="chips" aria-label="What to search">
+  {% for k in kinds %}
+    <a class="chip {{ 'on' if k == kind }}" href="{{ url_for('search_page', q=q, kind=k) if searched else '#' }}"
+       data-kind="{{ k }}"{% if k == kind %} aria-current="true"{% endif %}>{{ kind_labels[k] }}</a>
+  {% endfor %}
+</nav>
+{% endmacro %}
+
+{% macro alerts() %}
+<p class="alerts">
+  <a class="badge badge-overdue" href="{{ url_for('maintenance_page') }}">{{ overdue }} overdue</a>
+  <a class="badge badge-soon" href="{{ url_for('maintenance_page') }}">{{ soon }} due soon</a>
+</p>
+{% endmacro %}
+
+{% macro sel(name, options, current, any_label='Any') %}
+<label class="field">{{ caller() }}
+  <select name="{{ name }}">
+    <option value="">{{ any_label }}</option>
+    {% for val, label in options %}<option value="{{ val }}" {{ 'selected' if current == val }}>{{ label }}</option>{% endfor %}
+  </select>
+</label>
+{% endmacro %}
+
+{% block body %}
+{% if not searched %}
+<section class="home-stage" id="home-stage">
+  <h1 class="home-title">What are you looking for?</h1>
+  <form class="searchbox" id="searchbox" action="{{ url_for('search_page') }}" method="get" role="search">
+    <button type="button" class="searchbox-icon" id="search-open" aria-label="Search">{{ icon('search', 22) }}</button>
+    <input type="search" name="q" id="q" autocomplete="off" aria-label="Search the fleet"
+           placeholder="Search vehicles, trips, documents, dates…">
+    <input type="hidden" name="kind" id="kind" value="all">
+  </form>
+  <div class="home-extra">
+    {{ chips() }}
+    {{ alerts() }}
+  </div>
+</section>
+{% else %}
+<section class="results-stage">
+  <form class="searchbox open top" id="searchbox" action="{{ url_for('search_page') }}" method="get" role="search">
+    <span class="searchbox-icon">{{ icon('search', 18) }}</span>
+    <input type="search" name="q" id="q" value="{{ q }}" autocomplete="off" aria-label="Search the fleet"
+           placeholder="Search vehicles, trips, documents, dates…">
+    <input type="hidden" name="kind" value="{{ kind }}">
+  </form>
+  {{ chips() }}
+
+  {% if kind != 'all' %}
+  <form class="filters" method="get" action="{{ url_for('search_page') }}">
+    <input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="kind" value="{{ kind }}">
+    {% if kind in ('trips', 'fuel', 'maintenance', 'documents') %}
+      {% call sel('vehicle_id', opts.vehicles, filters.vehicle_id) %}Vehicle{% endcall %}
+    {% endif %}
+    {% if kind in ('trips', 'licenses') %}
+      {% call sel('driver_id', opts.drivers, filters.driver_id) %}Driver{% endcall %}
+    {% endif %}
+    {% if kind == 'vehicles' %}
+      {% call sel('vehicle_type', opts.types, filters.vehicle_type) %}Type{% endcall %}
+      {% call sel('status', opts.statuses, filters.status) %}Status{% endcall %}
+      {% call sel('location', opts.locations, filters.location) %}Location{% endcall %}
+    {% endif %}
+    {% if kind == 'documents' %}
+      {% call sel('document_type', opts.doc_types, filters.document_type) %}Document{% endcall %}
+    {% endif %}
+    {% if kind in ('trips', 'fuel', 'maintenance', 'documents', 'licenses') %}
+      <label class="field">From <input type="date" name="date_from" value="{{ filters.date_from or '' }}"></label>
+      <label class="field">To <input type="date" name="date_to" value="{{ filters.date_to or '' }}"></label>
+    {% endif %}
+    <button class="btn">Apply</button>
+    {% if filters %}<a class="btn ghost" href="{{ url_for('search_page', q=q, kind=kind) }}">Clear</a>{% endif %}
+  </form>
+  {% endif %}
+
+  {% set any = namespace(found=false) %}
+  {% for name, g in results.items() if g.total %}
+    {% set any.found = true %}
+    <section class="group" aria-label="{{ kind_labels[name] }}">
+      <h2>{{ kind_labels[name] }} · {{ g.total }}
+        {% if g.total > g.rows|length %}<span class="muted small">showing {{ g.rows|length }} of {{ g.total }}</span>{% endif %}</h2>
+      <div class="rows">
+      {% for r in g.rows %}
+        {% if name == 'vehicles' %}
+          <a class="row" href="{{ url_for('vehicle', vid=r.vehicle_id) }}">
+            <span class="row-main">{{ vehicle_icon(r.vehicle_type) }} <b>{{ display_name(r) }}</b>
+              <span class="muted">· {{ r.vehicle_type }}{% if r.asset_number %} · {{ r.asset_number }}{% endif %}{% if r.location %} · {{ r.location }}{% endif %}</span></span>
+            <span class="badge">{{ r.status }}</span>
+          </a>
+        {% elif name == 'trips' %}
+          <a class="row" href="{{ url_for('vehicle', vid=r.vehicle_id) }}#trips">
+            <span class="row-main"><b>{{ r.destination or 'Trip' }}</b>
+              <span class="muted">· {{ r.start_datetime.strftime('%b %d, %Y') }} · {{ r.driver_name }} · {{ display_name(r) }}</span></span>
+            <span class="muted">{% if r.ending_mileage and r.starting_mileage %}{{ r.ending_mileage - r.starting_mileage }} mi{% elif not r.end_datetime %}In progress{% endif %}</span>
+          </a>
+        {% elif name == 'fuel' %}
+          <a class="row" href="{{ url_for('vehicle', vid=r.vehicle_id) }}#fuel">
+            <span class="row-main"><b>{{ r.vendor or 'Fuel' }}</b>
+              <span class="muted">· {{ r.fuel_date.strftime('%b %d, %Y') }} · {{ display_name(r) }}{% if r.gallons %} · {{ r.gallons }} gal{% endif %}</span></span>
+            <span>{% if r.total_cost is not none %}${{ '%.2f'|format(r.total_cost) }}{% endif %}</span>
+          </a>
+        {% elif name == 'maintenance' %}
+          <a class="row" href="{{ url_for('vehicle', vid=r.vehicle_id) }}#maintenance">
+            <span class="row-main"><b>{{ r.service }}</b>
+              <span class="muted">· {{ r.entry }} · {{ display_name(r) }}{% if r.date %} · {{ r.date.strftime('%b %d, %Y') }}{% endif %}</span></span>
+            <span>{% if r.cost is not none %}${{ '%.2f'|format(r.cost) }}{% endif %}</span>
+          </a>
+        {% elif name == 'documents' %}
+          <a class="row" href="{{ url_for('vehicle', vid=r.vehicle_id) }}#documents">
+            <span class="row-main">{{ icon('file', 18) }} <b>{{ r.document_type }}</b>
+              <span class="muted">· {{ display_name(r) }}{% if r.expiration_date %} · expires {{ r.expiration_date.strftime('%b %d, %Y') }}{% endif %}</span></span>
+            <span class="badge">{{ r.access_level }}</span>
+          </a>
+        {% elif name == 'drivers' %}
+          <a class="row" href="{{ url_for('driver_page', did=r.driver_id) if user.can_see_licenses else url_for('driver_edit', did=r.driver_id) }}">
+            <span class="row-main"><b>{{ r.driver_name }}</b>
+              <span class="muted">· {{ r.driver_type or 'Driver' }}{% if r.department %} · {{ r.department }}{% endif %}</span></span>
+            <span class="badge">{{ 'Approved' if r.approved else 'Not approved' }}</span>
+          </a>
+          {% if user.can_see_licenses %}<a class="sr" href="{{ url_for('driver_edit', did=r.driver_id) }}">Edit {{ r.driver_name }}</a>{% endif %}
+        {% elif name == 'licenses' %}
+          <a class="row" href="/drivers/{{ r.driver_id }}">
+            <span class="row-main">{{ icon('lock', 18) }} <b>{{ r.driver_name }}</b>
+              <span class="muted">· {{ r.license_number or 'No number' }} · {{ r.state or '' }}</span></span>
+            <span class="muted">{% if r.expiration_date %}expires {{ r.expiration_date.strftime('%b %d, %Y') }}{% endif %}</span>
+          </a>
+        {% endif %}
+      {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+  {% if not any.found %}
+    {% if browse and not q %}<p class="empty muted">No records of this kind yet.</p>
+    {% else %}<p class="empty muted">Nothing found for "{{ q }}". Try a vehicle name, a plate, a driver or a date like 2026-10-03.</p>{% endif %}
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='search.js') }}"></script>{% endblock %}

@@ -1,0 +1,55 @@
+{% extends 'admin/layout.html' %}
+{% block title %}Admin overview{% endblock %}
+{% macro money(x) %}${{ '{:,.0f}'.format(x or 0) }}{% endmacro %}
+{% macro ago(t) %}{% set m = ((now - t).total_seconds() // 60)|int %}{{ 'just now' if m < 1 else m ~ ' min ago' if m < 60 else (m // 60) ~ ' hr ago' if m < 1440 else t.strftime('%b %d, %H:%M') }}{% endmacro %}
+{% block admin %}
+<h1>Overview</h1>
+<p class="muted">The fleet and who is using the site, at a glance.</p>
+
+<div class="stat-grid">
+  <div class="stat"><div class="n" data-stat="people">{{ people }}</div><div class="l">People with access</div>
+    <div class="s">{% for l, n in by_level.items() if n %}{{ n }} {{ level_labels[l] }}{{ ' · ' if not loop.last }}{% endfor %}</div></div>
+  <div class="stat"><div class="n" data-stat="online">{{ online|length }}</div><div class="l">Signed in now</div><div class="s">active in the last 15 minutes</div></div>
+  <div class="stat"><div class="n" data-stat="vehicles">{{ nums.vehicles }}</div><div class="l">Vehicles</div>
+    <div class="s">{% for t in types[:3] %}{{ t.n }} {{ t.vehicle_type|lower }}{{ 's' if t.n != 1 and t.vehicle_type[-1] != 's' }}{{ ' · ' if not loop.last }}{% endfor %}{% if types|length > 3 %} · …{% endif %}</div></div>
+  <div class="stat"><div class="n warn-red" data-stat="overdue">{{ overdue }}</div><div class="l">Maintenance overdue</div>
+    <div class="s">{% if soon %}<span class="badge badge-soon">{{ soon }} due soon</span>{% else %}none due soon{% endif %}</div></div>
+  <div class="stat"><div class="n" data-stat="trips">{{ nums.trips }}</div><div class="l">Trips this month</div></div>
+  <div class="stat"><div class="n" data-stat="fuel">{{ money(nums.fuel) }}</div><div class="l">Fuel this month</div></div>
+  <div class="stat"><div class="n" data-stat="fy">{{ money(nums.fy_total) }}</div><div class="l">Spent this fiscal year</div><div class="s">{{ nums.fy }}</div></div>
+  <div class="stat"><div class="n" data-stat="expiring">{{ nums.expiring }}</div><div class="l">Documents expiring</div><div class="s">in the next 60 days</div></div>
+</div>
+
+<div class="grid2">
+  <section class="card" id="online">
+    <h2>Signed in now <span class="muted small">{{ online|length }} {{ 'person' if online|length == 1 else 'people' }}</span></h2>
+    {% if online %}
+    <table class="table"><tbody>
+      {% for o in online %}
+      <tr><td><span class="dot" aria-hidden="true"></span>{{ o.full_name }}</td><td><span class="badge">{{ level_labels[o.level] }}</span></td>
+          <td class="muted small">{{ o.last_page or '' }}</td><td class="muted small">{{ ago(o.last_seen) }}</td></tr>
+      {% endfor %}
+    </tbody></table>
+    {% else %}<p class="muted">Nobody right now.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Most used vehicles <span class="muted small">this month</span></h2>
+    {% for t in top_vehicles %}
+      <div class="bar"><a href="{{ url_for('vehicle', vid=t.vehicle_id) }}" class="lbl">{{ display_name(t) }}</a>
+        <div class="track"><div class="fill" style="width: {{ (100 * t.n / top_max)|round|int }}%"></div></div><span>{{ t.n }} trip{{ 's' if t.n != 1 }}</span></div>
+    {% else %}<p class="muted">No trips this month yet.</p>{% endfor %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Recent activity {% if 'admin.activity' in url_map_endpoints %}<a class="small muted" href="{{ url_for('admin.activity') }}">See all &rarr;</a>{% endif %}</h2>
+  {% if recent %}
+  <table class="table"><tbody>
+    {% for a in recent %}
+    <tr><td class="muted small">{{ ago(a.at) }}</td><td>{{ a.full_name or 'Unknown' }}</td><td><span class="badge">{{ a.kind }}</span></td><td>{{ a.summary }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+  {% else %}<p class="muted">Nothing yet.</p>{% endif %}
+</section>
+{% endblock %}

@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Water School Vehicle Management Database  (PostgreSQL / Supabase)
 -- File 01: Schema (tables, constraints, indexes, helper functions, triggers, views)
--- PostgreSQL version of sql/01_schema.sql (SQL Server). Same tables and columns.
+-- PostgreSQL version of ../01_schema.sql (SQL Server). Same tables and columns.
 --
 -- Run order: 01_schema -> 02_security -> 03_reference_data -> 04_import_staging
 --            -> 05_procedures   (03b_demo_data only on an EMPTY practice database)

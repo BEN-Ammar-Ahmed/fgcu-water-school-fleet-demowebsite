@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Maintenance{% endblock %}
+{% block body %}
+<div class="head">
+  <h1>Maintenance</h1>
+  <div class="seg">
+    <a href="?show=attention" class="{{ 'on' if show == 'attention' }}">Needs attention</a>
+    <a href="?show=all" class="{{ 'on' if show == 'all' }}">All rules</a>
+  </div>
+</div>
+<p class="muted small">Intervals are proposed (oil change 5,000 mi / 6 months, wipers 6 months, boat 100-hour service 12 months,
+  trailer bearings 6 months). "Unknown" means there is no service in the FY22–FY26 repair logs.</p>
+<section class="card flush">
+<table class="list">
+  <thead><tr><th>Vehicle</th><th>Service</th><th>Every</th><th>Last done</th><th>Next due</th>{% if user.can_edit %}<th></th>{% endif %}</tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td><a href="{{ url_for('vehicle', vid=r.vehicle_id) }}">{{ display_name(r) }}</a></td>
+      <td>{{ r.maintenance_type }}</td>
+      <td>{% if r.mileage_interval %}{{ '{:,}'.format(r.mileage_interval) }} mi / {% endif %}{{ r.time_interval_months }} mo</td>
+      <td>{{ r.last_completed_date.strftime('%b %d, %Y') if r.last_completed_date else '—' }}</td>
+      <td>{{ r.due_date.strftime('%b %d, %Y') if r.due_date else '—' }}
+        {% if r.status == 'Overdue' %}<span class="badge badge-overdue">Overdue</span>{% elif r.status == 'Due soon' %}<span class="badge badge-soon">Due soon</span>{% else %}<span class="badge">{{ r.status }}</span>{% endif %}</td>
+      {% if user.can_edit %}
+      <td><form method="post" action="{{ url_for('maintenance_done', rid=r.rule_id) }}">
+        <input type="hidden" name="back" value="{{ request.full_path }}">
+        <button class="btn tiny">Mark done</button></form></td>
+      {% endif %}
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="muted">Nothing here.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</section>
+{% endblock %}

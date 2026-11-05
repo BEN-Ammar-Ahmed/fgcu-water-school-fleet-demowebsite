@@ -1,6 +1,6 @@
 -- =====================================================================
 -- File 03b: Demonstration data   PostgreSQL
--- PART B of sql/03_sample_data.sql: FICTIONAL names, VINs, plates and amounts
+-- PART B of ../03_sample_data.sql: FICTIONAL names, VINs, plates and amounts
 -- that imitate the real records (WEX statements, maintenance sheet, mileage log).
 --
 -- ONLY for an EMPTY practice database (e.g. a local water_school_fleet).

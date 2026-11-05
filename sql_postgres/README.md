@@ -1,6 +1,6 @@
 # PostgreSQL / Supabase version of the database
 
-These files are the PostgreSQL version of the SQL Server scripts in `../sql/`.
+These files are the PostgreSQL version of the SQL Server scripts in the top folder (`../`).
 They make the same tables, views, roles and data-entry steps, and they run on
 Supabase (PostgreSQL 17) or a local PostgreSQL.
 
@@ -12,7 +12,8 @@ Supabase (PostgreSQL 17) or a local PostgreSQL.
 | `01_schema.sql` | Tables, audit triggers, indexes, report views | Run | Run |
 | `02_security.sql` | Admin / Staff / Read-only roles and permissions | Run | Run |
 | `03_reference_data.sql` | WEX code legend, role list | Run | Run |
-| `03b_demo_data.sql` | Fictional demo vehicles, drivers, invoices | **Never** | Optional |
+| `03b_demo_data.sql` | Fictional demo vehicles, drivers, invoices (also used by the dashboard tests) | **Never** | Optional |
+| `03c_real_vehicles.sql` | The real 73 vehicles and 57 maintenance rules. Confidential: kept on your computer, not on GitHub | Already loaded | Skip |
 | `04_import_staging.sql` | Tables and steps for importing the spreadsheets | Run | Run |
 | `05_procedures.sql` | Data-entry functions (`add_trip`, `add_fuel`, ...) | Run | Run |
 | `06_security_tests.sql` | Checks the permissions; every line should say PASS | Run any time | Run any time |

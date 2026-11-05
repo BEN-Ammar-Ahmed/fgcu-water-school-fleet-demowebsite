@@ -1,0 +1,85 @@
+{% extends 'admin/layout.html' %}
+{% block title %}People & access{% endblock %}
+{% block admin %}
+<div class="head">
+  <div><h1>People &amp; access</h1><p class="muted">Who can sign in, what they can see, and what they can change.</p></div>
+</div>
+
+{% if errors %}<div class="flash flash-error" role="alert">{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div>{% endif %}
+
+<section class="card">
+  <h2>Add a person</h2>
+  <form method="post" action="{{ url_for('admin.add_person') }}" class="form-grid" id="add-person">
+    <label>Full name<input name="full_name" value="{{ form.full_name or '' }}" required maxlength="100"></label>
+    <label>FGCU email<input name="email" type="email" value="{{ form.email or '' }}" required maxlength="100" placeholder="name@fgcu.edu"></label>
+    <label>Access level<select name="level">
+      {% for l in assignable|reverse %}<option value="{{ l }}" {{ 'selected' if form.level == l }}>{{ level_labels[l] }}</option>{% endfor %}
+    </select></label>
+    <div class="wide actions"><button class="btn btn-primary">Add person</button>
+      <span class="muted small">{% if me.can_manage_admins %}As a top admin you can give any level.{% else %}Admins can add Tier 2 people. Ask a top admin to add an admin.{% endif %}</span></div>
+  </form>
+</section>
+
+<form class="filters" method="get" action="{{ url_for('admin.people') }}">
+  <label class="field">Search<input name="q" value="{{ text }}" placeholder="Name or email"></label>
+  <label class="field">Show<select name="show">
+    <option value="">Everyone</option>
+    {% for l in level_labels %}<option value="{{ l }}" {{ 'selected' if show == l }}>{{ level_labels[l] }}</option>{% endfor %}
+    <option value="removed" {{ 'selected' if show == 'removed' }}>Access removed</option>
+  </select></label>
+  <button class="btn">Apply</button>
+</form>
+
+<section class="card flush">
+<table class="table">
+  <thead><tr><th>Person</th><th>Access level</th><th>Confidential data</th><th>Status</th><th>Last active</th><th></th></tr></thead>
+  <tbody>
+  {% for p in rows %}
+    <tr class="{{ 'removed' if not p.active }}">
+      <td><b>{{ p.full_name }}</b><div class="muted small">{{ p.email or '' }}</div></td>
+      <td>
+        {% if p.changeable and p.active %}
+        <form method="post" action="{{ url_for('admin.change_level', uid=p.user_id) }}" class="inline">
+          <select name="level" aria-label="Access level for {{ p.full_name }}" onchange="this.form.submit()">
+            {% for l in assignable %}<option value="{{ l }}" {{ 'selected' if p.level == l }}>{{ level_labels[l] }}</option>{% endfor %}
+          </select>
+          <noscript><button class="btn tiny">Save</button></noscript>
+        </form>
+        {% else %}{{ level_labels[p.level] }}{% endif %}
+      </td>
+      <td>{% if p.level == 'top_admin' %}<span class="badge badge-dark">Yes</span>{% else %}<span class="muted small">No</span>{% endif %}</td>
+      <td>{% if not p.active %}Access removed{% elif p.online %}<span class="dot" aria-hidden="true"></span>Signed in{% else %}<span class="dot off" aria-hidden="true"></span>Offline{% endif %}</td>
+      <td class="muted small">{{ p.last_seen.strftime('%b %d, %H:%M') if p.last_seen else 'Never' }}</td>
+      <td>
+        {% if p.user_id == me.user_id %}<span class="muted small">You</span>
+        {% elif p.changeable %}
+        <form method="post" action="{{ url_for('admin.change_access', uid=p.user_id) }}" class="inline"
+              data-name="{{ p.full_name }}"
+              {% if p.active %}onsubmit="return confirm('Remove access for ' + this.dataset.name + '? They will be signed out.')"{% endif %}>
+          <input type="hidden" name="active" value="{{ '0' if p.active else '1' }}">
+          <button class="btn tiny {{ 'danger' if p.active else 'ghost' }}">{{ 'Remove access' if p.active else 'Give access back' }}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="muted">Nobody matches.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</section>
+
+<section class="card">
+  <h2>What each level can do</h2>
+  <table class="table">
+    <thead><tr><th>Level</th><th>Confidential (licenses)</th><th>View</th><th>Add &amp; edit</th><th>Delete</th><th>Manage people</th></tr></thead>
+    <tbody>
+      <tr><td><b>Top admin</b></td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Everyone</td></tr>
+      <tr><td><b>Admin</b></td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Tier 2 people only</td></tr>
+      <tr><td><b>Tier 2 · can edit</b></td><td>No</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td></tr>
+      <tr><td><b>Tier 2 · view only</b></td><td>No</td><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
+    </tbody>
+  </table>
+  <p class="muted small">Only a top admin can make someone an admin or top admin. The site always keeps at least one top admin, and nobody can change their own access. Every change is recorded in Activity.</p>
+</section>
+{% endblock %}

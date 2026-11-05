@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Add vehicle' if new else 'Edit vehicle' }}{% endblock %}
+{% block body %}
+<a class="muted small" href="{{ url_for('dashboard') if new else url_for('vehicle', vid=v.vehicle_id) }}">← Back</a>
+<h1>{{ 'Add a vehicle' if new else 'Edit ' ~ display_name(v) }}</h1>
+<form method="post" class="card form-grid two">
+  <label>Type<select name="vehicle_type">{% for t in types %}<option {{ 'selected' if v.vehicle_type == t }}>{{ t }}</option>{% endfor %}</select></label>
+  <label>Status<select name="status">{% for s in statuses %}<option {{ 'selected' if v.status == s }}>{{ s }}</option>{% endfor %}</select></label>
+  <label>Make<input name="make" maxlength="30" value="{{ v.make or '' }}"></label>
+  <label>Model<input name="model" maxlength="30" value="{{ v.model or '' }}"></label>
+  <label>Year<input name="year" type="number" min="1950" max="2100" value="{{ v.year or '' }}"></label>
+  <label>Property tag<input name="asset_number" maxlength="20" value="{{ v.asset_number or '' }}"></label>
+  <label>VIN / HIN<input name="vin" maxlength="30" value="{{ v.vin or '' }}"></label>
+  <label>Plate / registration<input name="license_plate" maxlength="20" value="{{ v.license_plate or '' }}"></label>
+  <label>Location<input name="location" maxlength="50" value="{{ v.location or '' }}"></label>
+  <label>Department<input name="department" maxlength="50" value="{{ v.department or '' }}"></label>
+  <label>Current mileage<input name="current_mileage" type="number" min="0" value="{{ v.current_mileage or '' }}"></label>
+  <label>Engine hours (boats)<input name="current_hours" type="number" step="0.1" min="0" value="{{ v.current_hours or '' }}"></label>
+  <label class="wide">Notes <span class="muted small">(first part before ";" is shown as the vehicle's name)</span>
+    <textarea name="notes" rows="4">{{ v.notes or '' }}</textarea></label>
+  <div class="wide"><button class="btn btn-primary">{{ 'Add vehicle' if new else 'Save changes' }}</button></div>
+</form>
+{% endblock %}

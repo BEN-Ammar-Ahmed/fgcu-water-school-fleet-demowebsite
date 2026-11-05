@@ -1,6 +1,6 @@
 -- =====================================================================
 -- File 06: Security test script   PostgreSQL / Supabase
--- PostgreSQL version of sql/06_security_tests.sql. Run AFTER 01-05 as the
+-- PostgreSQL version of ../06_security_tests.sql. Run AFTER 01-05 as the
 -- database owner (Supabase SQL Editor is fine).
 --
 -- It creates a test user for each role, switches to it, and checks what is

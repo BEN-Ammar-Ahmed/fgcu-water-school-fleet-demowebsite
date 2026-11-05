@@ -1,6 +1,6 @@
 -- =====================================================================
 -- File 04: Import from existing spreadsheets (staging + transforms)   PostgreSQL / Supabase
--- PostgreSQL version of sql/04_import_staging.sql.
+-- PostgreSQL version of ../04_import_staging.sql.
 -- Pattern:  CSV -> stg_* table (all text, never fails) -> clean INSERT into real tables
 -- Why: spreadsheets are messy (blank rows, "$1,234.50", "10-03" with no year).
 --      Staging lets you load first, LOOK, fix, then move clean rows across.
