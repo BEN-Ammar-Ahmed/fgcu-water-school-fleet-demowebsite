@@ -13,6 +13,7 @@ from flask import (Flask, render_template, request, redirect, url_for, session,
                    flash, abort, send_from_directory, g)
 from werkzeug.utils import secure_filename
 
+from changes import diff as change_diff
 from forms import Field, parse
 from search import KINDS, run_search
 from tiers import LEVEL_LABELS, doc_levels, level_for_role, load_user, user_for_email
@@ -143,17 +144,18 @@ def run(sql, args=()):
         raise
 
 
-ACTIVITY_KINDS = ('sign-in', 'view', 'change', 'download', 'access')
+ACTIVITY_KINDS = ('sign-in', 'sign-out', 'view', 'change', 'download', 'access')
 
 
-def log_activity(kind, summary, user=None, path=None):
-    """Append one line to wsb.activity_log. Never breaks the page if logging fails."""
+def log_activity(kind, summary, user=None, path=None, details=None):
+    """Append one line to wsb.activity_log. details: what an edit changed (changes.diff). Never breaks the page."""
     u = user or current_user()
     try:
-        run("""INSERT INTO wsb.activity_log (user_id, username, full_name, kind, summary, path)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
+        run("""INSERT INTO wsb.activity_log (user_id, username, full_name, kind, summary, path, details)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
             (u.user_id if u else None, u.username if u else None, u.full_name if u else None,
-             kind, str(summary)[:2000], (path or request.full_path)[:300] if request else None))
+             kind, str(summary)[:2000], (path or request.full_path)[:300] if request else None,
+             psycopg2.extras.Json(details) if details else None))
     except psycopg2.Error:
         app.logger.exception('Could not write the activity log')
 
@@ -191,6 +193,7 @@ def display_name(v):
 
 
 app.jinja_env.globals['display_name'] = display_name
+app.jinja_env.globals['change_text'] = __import__('changes').text
 
 MAINT_SQL = """
 SELECT r.*, v.vehicle_type, v.make, v.model, v.year, v.notes, v.location,
@@ -253,6 +256,7 @@ def login_demo():
 def logout():
     u = current_user()
     if u:
+        log_activity('sign-out', 'Signed out', user=u)
         try:
             run('UPDATE wsb.app_user SET last_seen = NULL WHERE user_id = %s', (u.user_id,))
         except psycopg2.Error:
@@ -380,6 +384,9 @@ def vehicle(vid):
 
 VEHICLE_FIELDS = ['asset_number', 'vehicle_type', 'make', 'model', 'year', 'vin', 'license_plate',
                   'department', 'current_mileage', 'current_hours', 'location', 'status', 'notes']
+VEHICLE_LABELS = {'asset_number': 'Property tag', 'vehicle_type': 'Type', 'vin': 'VIN / HIN',
+                  'license_plate': 'Plate / registration', 'current_mileage': 'Mileage',
+                  'current_hours': 'Engine hours'}
 
 
 def form_vehicle():
@@ -416,7 +423,8 @@ def vehicle_edit(vid):
             run(f"UPDATE wsb.vehicle SET {', '.join(f'{k} = %s' for k in d)} WHERE vehicle_id = %s",
                 list(d.values()) + [vid])
             flash('Changes saved.', 'ok')
-            log_activity('change', f"Edited vehicle {display_name(dict(d, vehicle_id=vid))}")
+            log_activity('change', f"Edited vehicle {display_name(dict(d, vehicle_id=vid))}",
+                         details=change_diff(v, {k: x for k, x in d.items() if k != 'active'}, VEHICLE_LABELS))
             return redirect(url_for('vehicle', vid=vid))
         except psycopg2.Error as e:
             flash(f'Could not save: {e.diag.message_primary}', 'error')
@@ -575,6 +583,12 @@ def _save_driver(did=None):
     values, errors = parse(fields, request.form)
     if not errors:
         d = {k: values[k] for k in DRIVER_COLS}
+        before = {}
+        if did:
+            before = dict(q('SELECT * FROM wsb.driver WHERE driver_id = %s', (did,), one=True) or {})
+            lic0 = q('SELECT license_number, state, expiration_date AS license_expiration FROM wsb.driver_license '
+                     'WHERE driver_id = %s ORDER BY license_id DESC LIMIT 1', (did,), one=True)
+            before.update(lic0 or {})
         try:
             if did:
                 run(f"UPDATE wsb.driver SET {', '.join(f'{k} = %s' for k in d)} WHERE driver_id = %s",
@@ -593,8 +607,10 @@ def _save_driver(did=None):
                     run('INSERT INTO wsb.driver_license (license_number, state, expiration_date, driver_id) '
                         'VALUES (%s, %s, %s, %s)', lic + (did,))
             flash('Saved.', 'ok')
+            after = {f.name: values.get(f.name) for f in fields}
             log_activity('change', f"{'Edited' if request.view_args.get('did') else 'Added'} driver "
-                                   f"{values['first_name']} {values['last_name']}")
+                                   f"{values['first_name']} {values['last_name']}",
+                         details=change_diff(before, after, {f.name: f.label for f in fields}) if did else None)
             return redirect(_driver_done(did))
         except psycopg2.Error as e:
             errors.append('That email is already used by another driver.' if getattr(e, 'pgcode', '') == '23505'
@@ -657,10 +673,14 @@ def maintenance_page():
 def maintenance_done(rid):
     day = request.form.get('date') or datetime.date.today().isoformat()
     miles = request.form.get('mileage') or None
+    r0 = q("""SELECT r.maintenance_type, r.last_completed_date, r.last_completed_mileage, r.vehicle_id
+              FROM wsb.maintenance_rule r WHERE rule_id = %s""", (rid,), one=True) or abort(404)
     run("""UPDATE wsb.maintenance_rule SET last_completed_date = %s,
            last_completed_mileage = COALESCE(%s, last_completed_mileage) WHERE rule_id = %s""", (day, miles, rid))
     flash('Marked as done.', 'ok')
-    log_activity('change', f'Marked schedule rule #{rid} done on {day}')
+    log_activity('change', f"Marked {r0['maintenance_type']} done · vehicle #{r0['vehicle_id']}",
+                 details=change_diff(r0, {'last_completed_date': day, 'last_completed_mileage': miles or r0['last_completed_mileage']},
+                                     {'last_completed_date': 'Last done', 'last_completed_mileage': 'Mileage when done'}))
     return redirect(request.form.get('back') or url_for('maintenance_page'))
 
 

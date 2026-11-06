@@ -2,13 +2,13 @@
 {% block title %}Activity{% endblock %}
 {% block admin %}
 <h1>Activity</h1>
-<p class="muted">Who signed in, viewed, changed, downloaded or gave access to what, and when. Nobody can edit or delete this list.</p>
+<p class="muted">Who signed in or out, viewed, changed, downloaded or gave access to what, and when. Nobody can edit or delete this list.</p>
 
 <form class="filters" method="get" action="{{ url_for('admin.activity') }}">
   <label class="field">Person or details<input name="q" value="{{ text }}" placeholder="e.g. Rivera, F-250"></label>
   <label class="field">What<select name="kind">
     <option value="">Everything</option>
-    {% for k in kinds %}<option value="{{ k }}" {{ 'selected' if kind == k }}>{{ {'sign-in':'Sign-ins','view':'Views','change':'Changes','download':'Downloads','access':'Access changes'}[k] }}</option>{% endfor %}
+    {% for k in kinds %}<option value="{{ k }}" {{ 'selected' if kind == k }}>{{ {'sign-in':'Sign-ins','sign-out':'Sign-outs','view':'Views','change':'Changes','download':'Downloads','access':'Access changes'}[k] }}</option>{% endfor %}
   </select></label>
   <label class="field">From<input type="date" name="date_from" value="{{ d0 or '' }}"></label>
   <label class="field">To<input type="date" name="date_to" value="{{ d1 or '' }}"></label>
@@ -22,7 +22,7 @@
   <tbody>
   {% for a in rows %}
     <tr><td class="muted small">{{ a.at.astimezone().strftime('%b %d, %Y %H:%M') }}</td><td>{{ a.full_name or 'Unknown' }}</td>
-        <td><span class="badge">{{ a.kind }}</span></td><td>{{ a.summary }}</td></tr>
+        <td><span class="badge">{{ a.kind }}</span></td><td>{{ a.summary }}{% if a.details %}<div class="muted small">{{ change_text(a.details) }}</div>{% endif %}</td></tr>
   {% else %}
     <tr><td colspan="4" class="muted">Nothing recorded{{ ' for these filters' if kind or text or d0 or d1 }}.</td></tr>
   {% endfor %}

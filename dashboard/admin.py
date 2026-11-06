@@ -175,7 +175,8 @@ def change_level(uid):
         return redirect(url_for('admin.people'))
     core.run("""UPDATE wsb.app_user SET role_id = (SELECT role_id FROM wsb.app_role WHERE role_name = %s)
                 WHERE user_id = %s""", (ROLE_FOR_LEVEL[new], uid))
-    core.log_activity('access', f"Changed {t['full_name']} from {LEVEL_LABELS[t['level']]} to {LEVEL_LABELS[new]}")
+    core.log_activity('access', f"Changed {t['full_name']} from {LEVEL_LABELS[t['level']]} to {LEVEL_LABELS[new]}",
+                      details=[{'field': 'Level', 'old': LEVEL_LABELS[t['level']], 'new': LEVEL_LABELS[new]}])
     flash(f"{t['full_name']} is now {LEVEL_LABELS[new]}.", 'ok')
     return redirect(url_for('admin.people'))
 
@@ -190,7 +191,8 @@ def change_access(uid):
         flash('The site needs at least one top admin. Make someone else a top admin first.', 'error')
         return redirect(url_for('admin.people'))
     core.run('UPDATE wsb.app_user SET active = %s WHERE user_id = %s', (active, uid))
-    core.log_activity('access', f"{'Gave back' if active else 'Removed'} {t['full_name']}'s access")
+    core.log_activity('access', f"{'Gave back' if active else 'Removed'} {t['full_name']}'s access",
+                      details=[{'field': 'Can sign in', 'old': 'No' if active else 'Yes', 'new': 'Yes' if active else 'No'}])
     flash(f"{t['full_name']} {'can sign in again' if active else 'can no longer sign in'}.", 'ok')
     return redirect(url_for('admin.people'))
 
@@ -199,7 +201,7 @@ def change_access(uid):
 # Activity (read-only list of the append-only log)
 # ---------------------------------------------------------------------------
 ACTIVITY_PAGE = 100
-ACTIVITY_KINDS = ('sign-in', 'view', 'change', 'download', 'access')
+ACTIVITY_KINDS = ('sign-in', 'sign-out', 'view', 'change', 'download', 'access')
 
 
 def _date(name):
