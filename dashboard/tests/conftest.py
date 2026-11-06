@@ -30,6 +30,7 @@ sys.path.insert(0, str(DASHBOARD))
 SQL_FILES = [
     '01_schema.sql', '02_security.sql', '03_reference_data.sql', '03b_demo_data.sql',
     '04_import_staging.sql', '05_procedures.sql', '07_web_access.sql', '08_admin_levels.sql', '09_demo_users.sql',
+    '10_suggestions.sql',
 ]
 
 
