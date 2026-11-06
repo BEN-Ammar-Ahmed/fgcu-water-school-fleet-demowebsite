@@ -53,7 +53,7 @@ def _sources(user, field):
         out = [('Vehicles', _VEHICLE.format(where=''))]
         if user.is_admin:
             out.append(('Drivers', """SELECT first_name || ' ' || last_name AS label, coalesce(department, '') AS detail,
-                                             '/search?kind=drivers&q=' || last_name AS url, driver_id::text AS value,
+                                             '/search?kind=drivers&q=' || replace(replace(replace(last_name, '%%', '%%25'), '&', '%%26'), ' ', '%%20') AS url, driver_id::text AS value,
                                              first_name || ' ' || last_name AS _t, 1 AS _n FROM wsb.driver"""))
         out.append(('Maintenance', """SELECT r.maintenance_type || ' · ' || concat_ws(' ', v.year, v.make, v.model) AS label,
                                              '' AS detail, '/vehicles/' || v.vehicle_id || '#maintenance' AS url,

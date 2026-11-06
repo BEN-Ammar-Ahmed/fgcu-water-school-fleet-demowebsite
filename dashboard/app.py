@@ -442,7 +442,7 @@ def vehicle_edit(vid):
 @app.route('/vehicles/<int:vid>/delete', methods=['POST'])
 @require(delete=True)
 def vehicle_delete(vid):
-    before = q('SELECT * FROM wsb.vehicle WHERE vehicle_id = %s', (vid,), one=True)
+    before = q('SELECT * FROM wsb.vehicle WHERE vehicle_id = %s', (vid,), one=True) or abort(404)
     files = [d['file_location'] for d in q('SELECT file_location FROM wsb.vehicle_document WHERE vehicle_id = %s', (vid,))]
     try:
         run('DELETE FROM wsb.vehicle WHERE vehicle_id = %s', (vid,))
@@ -678,8 +678,14 @@ def maintenance_page():
 @app.route('/maintenance/<int:rid>/done', methods=['POST'])
 @require(edit=True)
 def maintenance_done(rid):
-    day = request.form.get('date') or datetime.date.today().isoformat()
-    miles = request.form.get('mileage') or None
+    try:
+        day = datetime.date.fromisoformat(request.form.get('date') or datetime.date.today().isoformat())
+        miles = int(request.form['mileage'].replace(',', '')) if (request.form.get('mileage') or '').strip() else None
+        if miles is not None and miles < 0:
+            raise ValueError
+    except ValueError:
+        flash('Enter a real date and a whole number for mileage.', 'error')
+        return redirect(safe_next(request.form.get('back')) or url_for('maintenance_page'))
     r0 = q("""SELECT r.maintenance_type, r.last_completed_date, r.last_completed_mileage, r.vehicle_id
               FROM wsb.maintenance_rule r WHERE rule_id = %s""", (rid,), one=True) or abort(404)
     run("""UPDATE wsb.maintenance_rule SET last_completed_date = %s,
@@ -688,7 +694,7 @@ def maintenance_done(rid):
     log_activity('change', f"Marked {r0['maintenance_type']} done · vehicle #{r0['vehicle_id']}",
                  details=change_diff(r0, {'last_completed_date': day, 'last_completed_mileage': miles or r0['last_completed_mileage']},
                                      {'last_completed_date': 'Last done', 'last_completed_mileage': 'Mileage when done'}))
-    return redirect(request.form.get('back') or url_for('maintenance_page'))
+    return redirect(safe_next(request.form.get('back')) or url_for('maintenance_page'))
 
 
 @app.route('/vehicles/<int:vid>/rules', methods=['POST'])
@@ -697,7 +703,7 @@ def rule_add(vid):
     try:
         run("""INSERT INTO wsb.maintenance_rule (vehicle_id, maintenance_type, mileage_interval, time_interval_months,
                last_completed_date) VALUES (%s, %s, %s, %s, %s)""",
-            (vid, request.form['maintenance_type'].strip(), request.form.get('mileage_interval') or None,
+            (vid, (request.form.get('maintenance_type') or '').strip() or abort(400), request.form.get('mileage_interval') or None,
              request.form.get('time_interval_months') or None, request.form.get('last_completed_date') or None))
         flash('Maintenance rule added.', 'ok')
         log_activity('change', f"Added schedule rule {request.form['maintenance_type'].strip()} · vehicle #{vid}")
@@ -709,7 +715,7 @@ def rule_add(vid):
 @app.route('/rules/<int:rid>/delete', methods=['POST'])
 @require(delete=True)
 def rule_delete(rid):
-    r = run('DELETE FROM wsb.maintenance_rule WHERE rule_id = %s RETURNING vehicle_id', (rid,))
+    r = run('DELETE FROM wsb.maintenance_rule WHERE rule_id = %s RETURNING vehicle_id', (rid,)) or abort(404)
     flash('Rule removed.', 'ok')
     log_activity('change', f'Removed schedule rule #{rid}')
     return redirect(url_for('vehicle', vid=r['vehicle_id']) if r else url_for('maintenance_page'))
@@ -721,6 +727,7 @@ def rule_delete(rid):
 @app.route('/vehicles/<int:vid>/documents', methods=['POST'])
 @require(edit=True)
 def doc_upload(vid):
+    q('SELECT 1 FROM wsb.vehicle WHERE vehicle_id = %s', (vid,), one=True) or abort(404)
     f = request.files.get('file')
     level = request.form.get('access_level', 'General')
     if level not in doc_levels(current_user()):
@@ -771,12 +778,11 @@ def doc_file(did):
 @app.route('/documents/<int:did>/delete', methods=['POST'])
 @require(delete=True)
 def doc_delete(did):
-    d = run('DELETE FROM wsb.vehicle_document WHERE document_id = %s RETURNING vehicle_id, file_location', (did,))
-    if d:
-        (UPLOADS / d['file_location']).unlink(missing_ok=True)
+    d = run('DELETE FROM wsb.vehicle_document WHERE document_id = %s RETURNING vehicle_id, file_location', (did,)) or abort(404)
+    (UPLOADS / d['file_location']).unlink(missing_ok=True)
     flash('Document deleted.', 'ok')
     log_activity('change', f'Deleted document #{did}')
-    return redirect(request.form.get('back') or url_for('documents'))
+    return redirect(safe_next(request.form.get('back')) or url_for('documents'))
 
 
 # ---------------------------------------------------------------------------
