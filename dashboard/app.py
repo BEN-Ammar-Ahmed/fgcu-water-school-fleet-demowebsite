@@ -101,9 +101,16 @@ def sign_in_email(email):
     return u
 
 
+def _user_or_none():
+    try:
+        return current_user()
+    except psycopg2.Error:
+        return None
+
+
 @app.context_processor
 def inject():
-    return dict(user=current_user(), today=datetime.date.today(), DB_WHERE=DB_WHERE,
+    return dict(user=_user_or_none(), today=datetime.date.today(), DB_WHERE=DB_WHERE,
                 now=datetime.datetime.now(datetime.timezone.utc),
                 url_map_endpoints={r.endpoint for r in app.url_map.iter_rules()})
 
@@ -113,7 +120,7 @@ def inject():
 # ---------------------------------------------------------------------------
 def db():
     if 'db' not in g:
-        g.db = psycopg2.connect(DB_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+        g.db = psycopg2.connect(DB_URL, cursor_factory=psycopg2.extras.RealDictCursor, connect_timeout=10)
     return g.db
 
 
@@ -794,15 +801,47 @@ def help_page():
     return render_template('help.html')
 
 
-@app.errorhandler(403)
-def forbidden(_):
-    return render_template('error.html', code=403,
-                           msg='Your access tier does not include this page.'), 403
+# ---------------------------------------------------------------------------
+# Error pages. Each one says what happened and what to do next, never a stack trace.
+# ---------------------------------------------------------------------------
+ERRORS = {
+    400: ('Something was wrong with that request', 'The form or link was incomplete. Go back and try again.'),
+    403: ('Not allowed', 'Your access level does not include this page. Ask an admin if you need it.'),
+    404: ('Not found', 'That page or record does not exist. It may have been deleted, or the link is wrong.'),
+    405: ('That action is not allowed here', 'Go back and use the buttons on the page.'),
+    413: ('File too large', 'Uploads can be up to 20 MB. Make the file smaller and try again.'),
+    500: ('Something went wrong', 'The site hit an error. Nothing you did caused it. Try again, '
+                                 'and if it keeps happening tell the fleet manager what you were doing.'),
+    503: ('Cannot reach the database', 'The site cannot reach the database right now. Wait a minute and try again.'),
+}
 
 
-@app.errorhandler(404)
-def not_found(_):
-    return render_template('error.html', code=404, msg='That page or record does not exist.'), 404
+def error_page(code, msg=None):
+    title, default = ERRORS.get(code, ERRORS[500])
+    if request.path.startswith('/suggest'):
+        return jsonify({'error': title, 'groups': [], 'did_you_mean': None}), code
+    try:
+        return render_template('error.html', code=code, title=title, msg=msg or default), code
+    except Exception:   # e.g. the database is down and the page header can't load
+        app.logger.exception('Could not render the error page')
+        return (f'<!doctype html><title>{title}</title><h1>{title}</h1><p>{msg or default}</p>'
+                '<p><a href="/">Go to the home page</a></p>'), code
+
+
+for _code in (400, 403, 404, 405, 413):
+    app.register_error_handler(_code, lambda e, c=_code: error_page(c))
+
+
+@app.errorhandler(psycopg2.OperationalError)
+def database_down(e):
+    app.logger.error('Database unreachable: %s', e)
+    return error_page(503)
+
+
+@app.errorhandler(500)
+def server_error(e):
+    app.logger.exception('Unhandled error on %s', request.path)
+    return error_page(500)
 
 
 # Admin area (admin.py). It reaches this module's helpers through admin.core.

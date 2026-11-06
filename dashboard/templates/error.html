@@ -1,9 +1,14 @@
 {% extends 'base.html' %}
-{% block title %}{{ code }}{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 {% block body %}
-<div class="login">
-  <h1>{{ 'Not allowed' if code == 403 else 'Not found' }}</h1>
+<div class="login error-page">
+  <p class="muted small">Error {{ code }}</p>
+  <h1>{{ title }}</h1>
   <p class="muted">{{ msg }}</p>
-  <p><a class="btn ghost" href="{{ url_for('dashboard') if user else url_for('login') }}">Go back</a></p>
+  <p class="actions">
+    {% if code not in (500, 503) %}<a class="btn ghost" href="javascript:history.back()">Go back</a>{% endif %}
+    {% if code in (500, 503) %}<a class="btn ghost" href="{{ request.full_path }}">Try again</a>{% endif %}
+    <a class="btn" href="{{ url_for('dashboard') if user else url_for('login') }}">{{ 'Home' if user else 'Sign in' }}</a>
+  </p>
 </div>
 {% endblock %}
