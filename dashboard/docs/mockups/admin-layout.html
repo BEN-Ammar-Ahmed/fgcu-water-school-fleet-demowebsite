@@ -1,0 +1,109 @@
+<h2>Admin overview: which layout feels less cluttered?</h2>
+<p class="subtitle">Both show only what you picked: alerts, fleet numbers, who's online, and the log (with before → after changes). Vehicle types and "top 5 vehicles" move off this page.</p>
+
+<style>
+  .m { font-family: system-ui, sans-serif; font-size: 13px; color: #1f2933; }
+  .m .alerts { display:flex; gap:8px; margin-bottom:12px; }
+  .m .al { flex:1; border-radius:8px; padding:10px 12px; font-weight:600; }
+  .m .red { background:#fde8e8; color:#9b1c1c; } .m .amb { background:#fdf3d8; color:#8a5a00; } .m .blu { background:#e6f0fb; color:#1c4f8a; }
+  .m .al b { display:block; font-size:22px; }
+  .m .nums { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+  .m .n { background:#f4f6f8; border-radius:8px; padding:10px; } .m .n b { display:block; font-size:18px; }
+  .m .n span, .m .muted { color:#6b7785; font-size:11px; }
+  .m .panel { background:#fff; border:1px solid #e3e7eb; border-radius:8px; padding:10px 12px; margin-bottom:12px; }
+  .m .panel h4 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#6b7785; display:flex; justify-content:space-between; }
+  .m .panel h4 a { text-transform:none; color:#1c4f8a; letter-spacing:0; }
+  .m .row { display:flex; gap:8px; padding:6px 0; border-top:1px solid #f0f2f4; align-items:baseline; }
+  .m .row:first-of-type { border-top:0; }
+  .m .t { width:62px; color:#6b7785; font-size:11px; flex-shrink:0; }
+  .m .who { font-weight:600; width:90px; flex-shrink:0; }
+  .m .tag { font-size:10px; padding:1px 6px; border-radius:10px; background:#eef1f4; flex-shrink:0; }
+  .m .chg { color:#6b7785; font-size:11px; display:block; }
+  .m .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#2f9e44; margin-right:6px; }
+  .m .tabs { display:flex; gap:16px; border-bottom:1px solid #e3e7eb; margin-bottom:12px; padding-bottom:6px; font-weight:600; }
+  .m .tabs span.on { color:#1c4f8a; border-bottom:2px solid #1c4f8a; padding-bottom:4px; }
+  .m .tabs span { color:#6b7785; }
+  .m .two { display:grid; grid-template-columns: 1.6fr 1fr; gap:12px; }
+</style>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>One column, top to bottom</h3>
+      <p>Alerts first, then numbers, then the log. Who's online is a small line at the top.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Two columns: log on the left, "right now" on the right</h3>
+      <p>The log gets most of the space. Alerts and who's online sit in a side column.</p>
+    </div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">A · One column</div>
+    <div class="mockup-body m">
+      <div class="tabs"><span class="on">Overview</span><span>People</span><span>Log</span><span>Data</span></div>
+      <p class="muted" style="margin:0 0 10px"><span class="dot"></span>3 people online: Rivera (Fuel form), Chen (Vehicle #12), Patel (Home)</p>
+      <div class="alerts">
+        <div class="al red"><b>4</b>Maintenance overdue</div>
+        <div class="al amb"><b>7</b>Due in 30 days</div>
+        <div class="al blu"><b>2</b>Papers expiring</div>
+      </div>
+      <div class="nums">
+        <div class="n"><b>73</b><span>Active vehicles</span></div>
+        <div class="n"><b>118</b><span>Trips this month</span></div>
+        <div class="n"><b>$4,210</b><span>Fuel this month</span></div>
+        <div class="n"><b>$61k</b><span>Cost FY 26-27</span></div>
+      </div>
+      <div class="panel">
+        <h4>Latest activity <a>Full log →</a></h4>
+        <div class="row"><span class="t">2:41 pm</span><span class="who">J. Rivera</span><span class="tag">change</span><span>Edited 2019 Ford F-150<span class="chg">Mileage 41,200 → 42,050 · Status Active → In shop</span></span></div>
+        <div class="row"><span class="t">2:30 pm</span><span class="who">L. Chen</span><span class="tag">sign-in</span><span>Signed in</span></div>
+        <div class="row"><span class="t">1:58 pm</span><span class="who">M. Patel</span><span class="tag">change</span><span>Logged fuel · Boat #4<span class="chg">22.4 gal · $81.10</span></span></div>
+        <div class="row"><span class="t">1:12 pm</span><span class="who">J. Rivera</span><span class="tag">sign-out</span><span>Signed out</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">B · Two columns</div>
+    <div class="mockup-body m">
+      <div class="tabs"><span class="on">Overview</span><span>People</span><span>Log</span><span>Data</span></div>
+      <div class="nums">
+        <div class="n"><b>73</b><span>Active vehicles</span></div>
+        <div class="n"><b>118</b><span>Trips this month</span></div>
+        <div class="n"><b>$4,210</b><span>Fuel this month</span></div>
+        <div class="n"><b>$61k</b><span>Cost FY 26-27</span></div>
+      </div>
+      <div class="two">
+        <div class="panel">
+          <h4>Latest activity <a>Full log →</a></h4>
+          <div class="row"><span class="t">2:41 pm</span><span class="who">J. Rivera</span><span>Edited 2019 Ford F-150<span class="chg">Mileage 41,200 → 42,050 · Status Active → In shop</span></span></div>
+          <div class="row"><span class="t">2:30 pm</span><span class="who">L. Chen</span><span>Signed in</span></div>
+          <div class="row"><span class="t">1:58 pm</span><span class="who">M. Patel</span><span>Logged fuel · Boat #4<span class="chg">22.4 gal · $81.10</span></span></div>
+          <div class="row"><span class="t">1:12 pm</span><span class="who">J. Rivera</span><span>Signed out</span></div>
+        </div>
+        <div>
+          <div class="panel">
+            <h4>Needs attention</h4>
+            <div class="row"><span style="color:#9b1c1c;font-weight:600">4</span>&nbsp;maintenance overdue</div>
+            <div class="row"><span style="color:#8a5a00;font-weight:600">7</span>&nbsp;due in 30 days</div>
+            <div class="row"><span style="color:#1c4f8a;font-weight:600">2</span>&nbsp;papers expiring</div>
+          </div>
+          <div class="panel">
+            <h4>Online now</h4>
+            <div class="row"><span class="dot"></span>Rivera · Fuel form</div>
+            <div class="row"><span class="dot"></span>Chen · Vehicle #12</div>
+            <div class="row"><span class="dot"></span>Patel · Home</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="subtitle">Names and numbers are made up for the mockup.</p>

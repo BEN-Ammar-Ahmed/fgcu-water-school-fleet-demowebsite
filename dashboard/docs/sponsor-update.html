@@ -1,0 +1,201 @@
+<title>Water School Fleet Update</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one reading column, matching the site's black/white/gray look. Red/amber only for warnings. */
+:root {
+  --bg: #f7f7f6; --surface: #ffffff; --ink: #111111; --ink2: #5a5a57; --line: #dcdcd8; --soft: #efefed;
+  --red: #c2261c; --red-bg: #fde8e8; --amber: #9a5b00; --amber-bg: #fff4e0; --ok: #2f7a3e;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141414; --surface: #1d1d1c; --ink: #f1f1ef; --ink2: #a6a6a1; --line: #353533; --soft: #262625;
+  --red: #ff7a6e; --red-bg: #3a1c1a; --amber: #f0b45a; --amber-bg: #33281a; --ok: #6cc27f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141414; --surface: #1d1d1c; --ink: #f1f1ef; --ink2: #a6a6a1; --line: #353533; --soft: #262625;
+  --red: #ff7a6e; --red-bg: #3a1c1a; --amber: #f0b45a; --amber-bg: #33281a; --ok: #6cc27f; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--sans); }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 40px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
+h1 { font-size: clamp(26px, 5vw, 34px); line-height: 1.15; margin: 0; text-wrap: balance; font-weight: 650; }
+h2 { font-size: 20px; margin: 0 0 4px; text-wrap: balance; }
+h3 { font-size: 15px; margin: 0; }
+p { margin: 0; max-width: 65ch; }
+.muted { color: var(--ink2); }
+section { display: grid; gap: 14px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.fact b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+.fact span { font-size: 13px; color: var(--ink2); }
+ul.list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+ul.list li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; }
+ul.list li::before { content: "✓"; color: var(--ok); font-weight: 700; }
+ul.todo li::before { content: "○"; color: var(--ink2); }
+.change { display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+.change > p { font-size: 15px; }
+/* mockups */
+.mock { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 12px; font-size: 13px; overflow-x: auto; }
+.mock .tag { font-size: 11px; color: var(--ink2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+.nums { display: grid; grid-template-columns: repeat(4, minmax(90px, 1fr)); gap: 8px; margin-bottom: 10px; min-width: 420px; }
+.n { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.n b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; } .n span { font-size: 11px; color: var(--ink2); }
+.two { display: grid; grid-template-columns: 1.6fr 1fr; gap: 10px; min-width: 420px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; display: grid; gap: 2px; align-content: start; }
+.panel h4 { margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink2); display: flex; justify-content: space-between; }
+.row { display: flex; gap: 8px; padding: 5px 0; border-top: 1px solid var(--soft); align-items: baseline; }
+.row:first-of-type { border-top: 0; }
+.t { width: 54px; flex: none; color: var(--ink2); font-size: 11px; font-variant-numeric: tabular-nums; }
+.who { width: 70px; flex: none; font-weight: 600; }
+.chg { display: block; color: var(--ink2); font-size: 11px; }
+.red { color: var(--red); font-weight: 700; } .amb { color: var(--amber); font-weight: 700; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; margin-right: 6px; }
+.box { border: 1.5px solid var(--ink); border-radius: 6px; padding: 7px 10px; background: var(--surface); }
+.drop { border: 1px solid var(--line); border-radius: 6px; margin-top: 4px; background: var(--surface); }
+.grp { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink2); padding: 6px 10px 2px; }
+.it { padding: 6px 10px; display: flex; justify-content: space-between; gap: 8px; }
+.it.on { background: var(--soft); }
+.it span { color: var(--ink2); font-size: 11px; }
+.dym { background: var(--amber-bg); color: var(--amber); border-radius: 6px; padding: 7px 10px; margin-top: 6px; }
+.dym u { color: var(--ink); font-weight: 600; }
+.sugs { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.note { font-size: 12px; color: var(--ink2); }
+ol.q { margin: 0; padding-left: 22px; display: grid; gap: 10px; max-width: 65ch; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.tablewrap { overflow-x: auto; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink2); font-weight: 600; }
+footer { font-size: 13px; color: var(--ink2); border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">FGCU Water School · Fleet database · Sponsor meeting</div>
+    <h1>Water School Fleet: what's built and what's next</h1>
+    <p class="muted">A single place to track every vehicle and boat: trips, fuel, maintenance, papers, and who can see what.</p>
+  </header>
+
+  <section>
+    <h2>Built so far</h2>
+    <div class="facts">
+      <div class="fact"><b>73</b><span>vehicles and boats loaded</span></div>
+      <div class="fact"><b>57</b><span>maintenance schedule rules</span></div>
+      <div class="fact"><b>4</b><span>access levels, from view-only to top admin</span></div>
+      <div class="fact"><b>1</b><span>activity log nobody can edit or delete</span></div>
+    </div>
+    <ul class="list">
+      <li><span><b>Database</b> with vehicles, drivers, licenses, trips, fuel, maintenance, invoices and documents. It also has the WEX fuel codes and the access roles.</span></li>
+      <li><span><b>Website</b> where staff can search the fleet, open a vehicle, log trips, fuel and maintenance, and upload papers like insurance.</span></li>
+      <li><span><b>Maintenance alerts</b> that show what's overdue or due soon, by date or mileage.</span></li>
+      <li><span><b>Access control:</b> each person only sees what their level allows. Driver licenses are visible to top admins only.</span></li>
+      <li><span><b>Admin area</b> where admins add people, change access levels and see the activity log.</span></li>
+      <li><span><b>Handoff notes</b> for FGCU IT: hosting, setup and a go-live checklist.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Proposed next</h2>
+    <p class="muted">Mockups only. The names and numbers are examples, not real fleet data.</p>
+
+    <div class="change">
+      <h3>1. Suggestions while typing</h3>
+      <p>Matches appear as soon as you start typing. Forms suggest vehicles, drivers and values used before. Typos get a "Did you mean…?" fix that you click. The site never changes what you typed on its own.</p>
+      <div class="sugs">
+        <div class="mock">
+          <div class="tag">Search bar</div>
+          <div class="box">f-15</div>
+          <div class="drop">
+            <div class="grp">Vehicles</div>
+            <div class="it on"><div><b>F-15</b>0 · 2019 Ford · #12</div><span>Active</span></div>
+            <div class="it"><div><b>F-15</b>0 · 2021 Ford · #31</div><span>In shop</span></div>
+            <div class="grp">Maintenance</div>
+            <div class="it"><div>Oil change · <b>F-15</b>0 #12</div><span>Overdue</span></div>
+          </div>
+        </div>
+        <div class="mock">
+          <div class="tag">Log fuel form</div>
+          <div class="box">boat 4</div>
+          <div class="drop">
+            <div class="it on"><div><b>Boat #4</b> · 2018 Skiff</div><span>#44</span></div>
+            <div class="it"><div><b>Boat #4</b>1 · 2022 Sea Ark</div><span>#58</span></div>
+          </div>
+        </div>
+        <div class="mock">
+          <div class="tag">Typo</div>
+          <div class="box">fird ranger</div>
+          <div class="dym">Did you mean <u>Ford Ranger</u>?</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="change">
+      <h3>2. A cleaner admin overview and a fuller log</h3>
+      <p>The overview keeps only what admins check every day: alerts, the main numbers, who's online and the latest activity. The log now records sign-outs too, and edits show exactly what changed, old value to new value.</p>
+      <div class="mock">
+        <div class="nums">
+          <div class="n"><b>73</b><span>Active vehicles</span></div>
+          <div class="n"><b>118</b><span>Trips this month</span></div>
+          <div class="n"><b>$4,210</b><span>Fuel this month</span></div>
+          <div class="n"><b>$61k</b><span>Cost this fiscal year</span></div>
+        </div>
+        <div class="two">
+          <div class="panel">
+            <h4>Latest activity <span>Full log →</span></h4>
+            <div class="row"><span class="t">2:41 pm</span><span class="who">Rivera</span><span>Edited 2019 Ford F-150<span class="chg">Mileage 41,200 → 42,050 · Status Active → In shop</span></span></div>
+            <div class="row"><span class="t">2:30 pm</span><span class="who">Chen</span><span>Signed in</span></div>
+            <div class="row"><span class="t">1:58 pm</span><span class="who">Patel</span><span>Logged fuel · Boat #4<span class="chg">22.4 gal · $81.10</span></span></div>
+            <div class="row"><span class="t">1:12 pm</span><span class="who">Rivera</span><span>Signed out</span></div>
+          </div>
+          <div style="display:grid;gap:10px;align-content:start">
+            <div class="panel">
+              <h4>Needs attention</h4>
+              <div class="row"><span class="red">4</span>maintenance overdue</div>
+              <div class="row"><span class="amb">7</span>due in 30 days</div>
+              <div class="row"><span><b>2</b></span>papers expiring</div>
+            </div>
+            <div class="panel">
+              <h4>Online now</h4>
+              <div class="row"><span class="dot"></span>Rivera · Fuel form</div>
+              <div class="row"><span class="dot"></span>Chen · Vehicle #12</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Questions for you</h2>
+    <ol class="q">
+      <li>Which tasks do staff do most often: logging trips, fuel, maintenance or looking things up? We'll make those the fastest.</li>
+      <li>What should the admin overview warn about first? Overdue maintenance, expiring papers, or something else?</li>
+      <li>Who should get a login, and at which level: view only, editor, admin or top admin?</li>
+      <li>Who should be able to see driver license details?</li>
+      <li>Is there a report you send regularly, such as monthly fuel or yearly cost per vehicle, that the site should produce?</li>
+      <li>Where should the site live? An FGCU server, or a host that FGCU IT approves?</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Data we still need</h2>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Data</th><th>From</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Maintenance and repair costs</td><td>Vehicle and Boat Maintenance spreadsheet, invoices</td><td>Have it, loading next</td></tr>
+        <tr><td>Fuel</td><td>Monthly WEX statements</td><td>Have it, loading next</td></tr>
+        <tr><td>Trips</td><td>Fleet mileage log</td><td>Have it, loading next</td></tr>
+        <tr><td>Boater safety certificates, insurance papers</td><td>Spreadsheet and PDFs</td><td>Have it, loading next</td></tr>
+        <tr><td>Drivers and licenses</td><td>Fleet Manager</td><td>Not received yet</td></tr>
+        <tr><td>Registrations and titles</td><td>Fleet Manager</td><td>Not received yet</td></tr>
+        <tr><td>Who gets a login</td><td>Sponsor / Fleet Manager</td><td>Not received yet</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <footer>FGCU Water School fleet database, student team. Prepared for the sponsor meeting, November 2026.</footer>
+</div>

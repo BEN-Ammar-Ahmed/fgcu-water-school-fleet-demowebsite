@@ -1,0 +1,72 @@
+<h2>Typing suggestions: does this match what you meant?</h2>
+<p class="subtitle">Suggestions come from what's already in the database. Use the arrow keys or click to pick one.</p>
+
+<style>
+  .m { font-family: system-ui, sans-serif; font-size: 13px; color:#1f2933; }
+  .m .box { border:1px solid #c9d1d9; border-radius:8px; padding:9px 12px; background:#fff; }
+  .m .box.focus { border-color:#1c4f8a; box-shadow:0 0 0 3px #e6f0fb; }
+  .m .drop { border:1px solid #e3e7eb; border-radius:8px; margin-top:4px; background:#fff; box-shadow:0 6px 18px rgba(0,0,0,.08); overflow:hidden; }
+  .m .grp { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:#6b7785; padding:6px 12px 2px; }
+  .m .it { padding:7px 12px; display:flex; justify-content:space-between; }
+  .m .it.on { background:#e6f0fb; }
+  .m .it span { color:#6b7785; font-size:11px; }
+  .m mark { background:none; font-weight:700; color:#1c4f8a; }
+  .m label { display:block; font-weight:600; margin:0 0 4px; font-size:12px; }
+  .m .dym { background:#fdf3d8; color:#8a5a00; border-radius:8px; padding:8px 12px; margin-top:6px; }
+  .m .dym a { color:#1c4f8a; font-weight:600; text-decoration:underline; }
+  .m .note { color:#6b7785; font-size:11px; margin-top:6px; }
+</style>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">1 · Search bar (also the admin People and Log search)</div>
+    <div class="mockup-body m">
+      <div class="box focus">f-15|</div>
+      <div class="drop">
+        <div class="grp">Vehicles</div>
+        <div class="it on"><div><mark>F-15</mark>0 · 2019 Ford · #12</div><span>Active</span></div>
+        <div class="it"><div><mark>F-15</mark>0 · 2021 Ford · #31</div><span>In shop</span></div>
+        <div class="grp">Drivers</div>
+        <div class="it"><div>Rivera, J. · drove #12 yesterday</div><span>Driver</span></div>
+        <div class="grp">Maintenance</div>
+        <div class="it"><div>Oil change · <mark>F-15</mark>0 #12</div><span>Overdue</span></div>
+      </div>
+      <p class="note">Shows after 2 letters. Enter opens the highlighted one. "See all results" is at the bottom.</p>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">2 · Entry form (e.g. Log fuel)</div>
+    <div class="mockup-body m">
+      <label>Vehicle</label>
+      <div class="box focus">boat 4|</div>
+      <div class="drop">
+        <div class="it on"><div><mark>Boat #4</mark> · 2018 Carolina Skiff</div><span>#44</span></div>
+        <div class="it"><div><mark>Boat #4</mark>1 · 2022 Sea Ark</div><span>#58</span></div>
+      </div>
+      <label style="margin-top:12px">Vendor</label>
+      <div class="box">Wawa</div>
+      <p class="note">Vendor, driver, location and maintenance type suggest what's been typed before. You can still type something new.</p>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px">
+  <div class="mockup-header">3 · Typos</div>
+  <div class="mockup-body m">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <label>Search</label>
+        <div class="box">fird ranger</div>
+        <div class="dym">No exact match. Did you mean <a>Ford Ranger</a>? (3 vehicles)</div>
+      </div>
+      <div>
+        <label>Driver (on a form)</label>
+        <div class="box">Rivra</div>
+        <div class="drop"><div class="grp">Close matches</div><div class="it on"><div>Rivera, Jose</div><span>Driver</span></div></div>
+      </div>
+    </div>
+    <p class="note">The site never changes what you typed by itself. It suggests the fix, and you click it.</p>
+  </div>
+</div>
+<p class="subtitle">Names and vehicles are made up for the mockup.</p>
