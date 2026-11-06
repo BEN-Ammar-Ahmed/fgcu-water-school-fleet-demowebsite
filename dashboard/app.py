@@ -10,7 +10,7 @@ from pathlib import Path
 
 import psycopg2, psycopg2.extras
 from flask import (Flask, render_template, request, redirect, url_for, session,
-                   flash, abort, send_from_directory, g)
+                   flash, abort, send_from_directory, g, jsonify)
 from werkzeug.utils import secure_filename
 
 from changes import diff as change_diff
@@ -168,7 +168,7 @@ PAGE_LABELS = {'dashboard': 'Home', 'help_page': 'Help', 'maintenance_page': 'Ma
 def remember_last_seen(response):
     """Record when each person was last active and what they were looking at (at most once a minute)."""
     u = g.get('user')
-    if u and request.method == 'GET' and response.status_code == 200 and request.endpoint not in (None, 'static'):
+    if u and request.method == 'GET' and response.status_code == 200 and request.endpoint not in (None, 'static', 'suggest_json'):
         label = g.get('page_label') or PAGE_LABELS.get(request.endpoint) or request.path
         try:
             run("""UPDATE wsb.app_user SET last_seen = now(), last_page = %s
@@ -775,6 +775,14 @@ def doc_delete(did):
 # ---------------------------------------------------------------------------
 # Old roles page -> help
 # ---------------------------------------------------------------------------
+@app.route('/suggest')
+@require()
+def suggest_json():
+    """Suggestions while typing. Not logged: it runs on every pause in typing."""
+    from suggest import suggest
+    return jsonify(suggest(q, current_user(), request.args.get('field', ''), request.args.get('q', '')))
+
+
 @app.route('/roles')
 def roles():
     return redirect(url_for('help_page') + '#tiers', code=301)
