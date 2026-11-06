@@ -12,7 +12,7 @@
   <a class="brand" href="{{ url_for('dashboard') }}"><span class="logo" aria-hidden="true">WS</span> Water School Fleet</a>
   <div class="topsearch">{% block topsearch %}
     <form class="topsearch-form" action="{{ url_for('search_page') }}" method="get" role="search">
-      {{ icon('search', 16) }}<input type="search" name="q" aria-label="Search the fleet" placeholder="Search the fleet  ( / )">
+      {{ icon('search', 16) }}<input type="search" name="q" data-suggest="search" aria-label="Search the fleet" placeholder="Search the fleet  ( / )">
     </form>{% endblock %}</div>
   <nav class="topnav">
     {% if user.can_edit %}
@@ -41,5 +41,6 @@
   {% block body %}{% endblock %}
 </main>
 {% block scripts %}<script src="{{ url_for('static', filename='search.js') }}"></script>{% endblock %}
+<script src="{{ url_for('static', filename='suggest.js') }}"></script>
 </body>
 </html>

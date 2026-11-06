@@ -35,7 +35,7 @@
   <h1 class="home-title">What are you looking for?</h1>
   <form class="searchbox" id="searchbox" action="{{ url_for('search_page') }}" method="get" role="search">
     <button type="button" class="searchbox-icon" id="search-open" aria-label="Search">{{ icon('search', 22) }}</button>
-    <input type="search" name="q" id="q" autocomplete="off" aria-label="Search the fleet"
+    <input type="search" name="q" id="q" data-suggest="search" autocomplete="off" aria-label="Search the fleet"
            placeholder="Search vehicles, trips, documents, dates…">
     <input type="hidden" name="kind" id="kind" value="all">
   </form>
@@ -48,7 +48,7 @@
 <section class="results-stage">
   <form class="searchbox open top" id="searchbox" action="{{ url_for('search_page') }}" method="get" role="search">
     <span class="searchbox-icon">{{ icon('search', 18) }}</span>
-    <input type="search" name="q" id="q" value="{{ q }}" autocomplete="off" aria-label="Search the fleet"
+    <input type="search" name="q" id="q" data-suggest="search" value="{{ q }}" autocomplete="off" aria-label="Search the fleet"
            placeholder="Search vehicles, trips, documents, dates…">
     <input type="hidden" name="kind" value="{{ kind }}">
   </form>

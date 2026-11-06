@@ -217,3 +217,14 @@ tr.removed { opacity: .55; }
   .who-name { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Suggestions while typing (static/suggest.js) */
+.suggest { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 50; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.10);
+  max-height: 360px; overflow-y: auto; text-align: left; font-size: 14px; }
+.suggest-group { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink2); padding: 8px 12px 2px; }
+.suggest-item { display: flex; justify-content: space-between; gap: 12px; padding: 7px 12px; cursor: pointer; color: var(--ink); }
+.suggest-item small { color: var(--ink2); white-space: nowrap; }
+.suggest-item.on, .suggest-item:hover { background: var(--soft); }
+.suggest-item.all { border-top: 1px solid var(--line); color: var(--ink2); }
+.suggest-item.fix { background: var(--warn-amber-bg); color: var(--warn-amber); }

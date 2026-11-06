@@ -21,7 +21,7 @@
 </section>
 
 <form class="filters" method="get" action="{{ url_for('admin.people') }}">
-  <label class="field">Search<input name="q" value="{{ text }}" placeholder="Name or email"></label>
+  <label class="field">Search<input name="q" value="{{ text }}" placeholder="Name or email" data-suggest="people" data-suggest-mode="fill"></label>
   <label class="field">Show<select name="show">
     <option value="">Everyone</option>
     {% for l in level_labels %}<option value="{{ l }}" {{ 'selected' if show == l }}>{{ level_labels[l] }}</option>{% endfor %}
