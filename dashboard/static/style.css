@@ -219,7 +219,7 @@ tr.removed { opacity: .55; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 /* Suggestions while typing (static/suggest.js) */
-.suggest { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 50; background: var(--surface);
+.suggest { position: absolute; left: 0; right: 0; min-width: min(340px, 90vw); top: calc(100% + 4px); z-index: 50; background: var(--surface);
   border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.10);
   max-height: 360px; overflow-y: auto; text-align: left; font-size: 14px; }
 .suggest-group { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink2); padding: 8px 12px 2px; }
@@ -228,3 +228,6 @@ tr.removed { opacity: .55; }
 .suggest-item.on, .suggest-item:hover { background: var(--soft); }
 .suggest-item.all { border-top: 1px solid var(--line); color: var(--ink2); }
 .suggest-item.fix { background: var(--warn-amber-bg); color: var(--warn-amber); }
+/* The search boxes clip their contents for the open/close animation; let the dropdown show while it's open. */
+.searchbox:has(> .suggest:not([hidden])), .topsearch:has(> .suggest:not([hidden])) { overflow: visible; }
+.searchbox:has(> .suggest:not([hidden])) { position: relative; z-index: 60; }
