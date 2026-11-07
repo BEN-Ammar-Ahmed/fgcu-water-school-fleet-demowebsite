@@ -1,0 +1,4 @@
+{# Reservation status badge. #}
+{% macro status_badge(s) -%}
+<span class="badge res-{{ s|lower|replace(' ', '-') }}">{{ s }}</span>
+{%- endmacro %}

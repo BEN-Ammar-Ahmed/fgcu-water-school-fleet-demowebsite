@@ -33,6 +33,7 @@ SQL_FILES = [
     '10_suggestions.sql',
     '11_vehicle_name.sql',
     '12_tiers.sql',
+    '13_reservations.sql',
 ]
 
 

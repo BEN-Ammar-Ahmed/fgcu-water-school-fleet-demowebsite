@@ -293,3 +293,29 @@ a.stat:hover { border-color: var(--ink2); }
 .abilities .switches form { display: grid; gap: 4px; padding: 8px 0; }
 .tier-table td:not(:first-child), .tier-table th:not(:first-child) { text-align: center; }
 .abilities { min-width: 250px; }
+
+/* Reservations */
+.res-page { max-width: 1100px; }
+.res-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.res-head h1 { display: flex; align-items: center; gap: 10px; }
+.res-tabs { justify-content: flex-start; margin: 0 0 14px; }
+.res-pending, .res-needs-info { background: var(--warn-amber-bg); border-color: var(--warn-amber-bg); color: var(--warn-amber); }
+.res-approved { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.res-denied { background: var(--warn-red-bg); border-color: var(--warn-red-bg); color: var(--warn-red); }
+.res-cancelled { color: var(--ink2); }
+.res-facts { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 6px 12px; margin: 0; }
+.res-facts dt { color: var(--ink2); font-size: 13px; }
+.res-facts dd { margin: 0; overflow-wrap: anywhere; }
+.res-facts .pre { white-space: pre-wrap; }
+.decide { grid-template-columns: 1fr; }
+.res-history { list-style: none; margin: 0; padding: 0; }
+.res-history li { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; padding: 7px 0; border-top: 1px solid var(--soft); }
+.res-history li:first-child { border-top: 0; }
+.res-history .detail { display: block; }
+.res-email { border-top: 1px solid var(--soft); padding: 8px 0; }
+.res-email summary { cursor: pointer; }
+.email-body { white-space: pre-wrap; font: 13px/1.5 ui-monospace, Consolas, monospace; background: var(--soft); padding: 10px; border-radius: var(--radius); margin: 8px 0 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .res-facts, .res-history li { grid-template-columns: 1fr; } }
+.res-table td:nth-child(n+2) { min-width: 9em; }   /* readable dates on phones (the table scrolls) */
+@media (max-width: 900px) { .navtext { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
+@media (max-width: 520px) { .brand-text, .who .badge { display: none; } .topnav { gap: 10px; } }

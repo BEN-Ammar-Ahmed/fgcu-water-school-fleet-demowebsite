@@ -34,7 +34,7 @@
       {% endif %}
     {% endfor %}
     <div class="wide actions">
-      <button class="btn btn-primary">Save</button>
+      <button class="btn btn-primary">{{ submit_label or 'Save' }}</button>
       <a class="btn ghost" href="{{ cancel }}">Cancel</a>
     </div>
   </form>

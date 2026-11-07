@@ -230,7 +230,7 @@ def change_switches(uid):
 # Activity (read-only list of the append-only log)
 # ---------------------------------------------------------------------------
 ACTIVITY_PAGE = 100
-ACTIVITY_KINDS = ('sign-in', 'sign-out', 'view', 'change', 'download', 'access')
+ACTIVITY_KINDS = ('sign-in', 'sign-out', 'view', 'change', 'download', 'access', 'reservation')
 
 
 def _date(name):

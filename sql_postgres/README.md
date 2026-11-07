@@ -23,6 +23,7 @@ Supabase (PostgreSQL 17) or a local PostgreSQL.
 | `10_suggestions.sql` | Typing suggestions (pg_trgm when allowed), edit details and sign-outs in the activity log | Run | Run |
 | `11_vehicle_name.sql` | A Name field for each vehicle (copied once from the start of its notes) | Run | Run |
 | `12_tiers.sql` | Three tiers plus per-person switches; the old Admin level becomes Tier 1 | Run | Run |
+| `13_reservations.sql` | Vehicle requests, their history, and the email outbox | Run | Run |
 
 On Supabase, open **SQL Editor → New query**, paste one file, and click **Run**.
 Files 01–05 can be run again at any time; they keep existing data.

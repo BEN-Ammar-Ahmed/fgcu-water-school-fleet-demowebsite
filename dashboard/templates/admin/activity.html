@@ -8,7 +8,7 @@
   <label class="field">Person or details<input name="q" value="{{ text }}" placeholder="e.g. Rivera, F-250" data-suggest="activity" data-suggest-mode="fill"></label>
   <label class="field">What<select name="kind">
     <option value="">Everything</option>
-    {% for k in kinds %}<option value="{{ k }}" {{ 'selected' if kind == k }}>{{ {'sign-in':'Sign-ins','sign-out':'Sign-outs','view':'Views','change':'Changes','download':'Downloads','access':'Access changes'}[k] }}</option>{% endfor %}
+    {% for k in kinds %}<option value="{{ k }}" {{ 'selected' if kind == k }}>{{ {'sign-in':'Sign-ins','sign-out':'Sign-outs','view':'Views','change':'Changes','download':'Downloads','access':'Access changes','reservation':'Reservations'}[k] }}</option>{% endfor %}
   </select></label>
   <label class="field">From<input type="date" name="date_from" value="{{ d0 or '' }}"></label>
   <label class="field">To<input type="date" name="date_to" value="{{ d1 or '' }}"></label>

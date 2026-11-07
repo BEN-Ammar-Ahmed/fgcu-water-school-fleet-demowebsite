@@ -152,7 +152,7 @@ def run(sql, args=()):
         raise
 
 
-ACTIVITY_KINDS = ('sign-in', 'sign-out', 'view', 'change', 'download', 'access')
+ACTIVITY_KINDS = ('sign-in', 'sign-out', 'view', 'change', 'download', 'access', 'reservation')
 
 
 def log_activity(kind, summary, user=None, path=None, details=None):
@@ -914,6 +914,9 @@ app.register_blueprint(admin.bp)
 import import_views  # noqa: E402
 import_views.core = sys.modules[__name__]
 app.register_blueprint(import_views.imp)
+import reservations  # noqa: E402
+reservations.core = sys.modules[__name__]
+app.register_blueprint(reservations.res)
 
 
 if __name__ == '__main__':

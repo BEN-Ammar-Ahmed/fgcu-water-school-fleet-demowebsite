@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% from '_res.html' import status_badge %}
+{% block title %}Reservation #{{ r.reservation_id }}{% endblock %}
+{% block body %}
+<div class="res-page">
+  <p class="small"><a href="{{ url_for('res.inbox') if user.can('approve') else url_for('res.mine') }}">← {{ 'Reservations' if user.can('approve') else 'My vehicle requests' }}</a></p>
+  <div class="res-head">
+    <h1>Request #{{ r.reservation_id }} {{ status_badge(r.status) }}</h1>
+    {% if is_mine %}
+    <div class="actions">
+      {% if r.status in open %}<a class="btn" href="{{ url_for('res.edit', rid=r.reservation_id) }}">{{ icon('edit', 16) }} Update request</a>{% endif %}
+      {% if can_cancel %}
+      <form method="post" action="{{ url_for('res.cancel', rid=r.reservation_id) }}" onsubmit="return confirm('Cancel this request?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn ghost">Cancel request</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if r.status == 'Needs info' %}
+    <div class="flash flash-error" role="status"><b>More information needed:</b> {{ r.decision_note }}
+      {% if is_mine %}<br><a href="{{ url_for('res.edit', rid=r.reservation_id) }}">Update your request</a> and it goes back for a decision.{% endif %}</div>
+  {% elif r.status == 'Approved' %}
+    <div class="flash flash-ok" role="status"><b>Approved</b> by {{ r.decided_by }}: {{ r.vehicle_label or 'vehicle to be confirmed' }}.{% if r.decision_note %} {{ r.decision_note }}{% endif %}</div>
+  {% elif r.status == 'Denied' %}
+    <div class="flash flash-error" role="status"><b>Denied</b> by {{ r.decided_by }}. Reason: {{ r.decision_note }}</div>
+  {% endif %}
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Request</h2>
+      <dl class="res-facts">
+        <dt>Name</dt><dd>{{ r.requester_name }}</dd>
+        <dt>Email</dt><dd>{{ r.requester_email }}</dd>
+        <dt>UIN</dt><dd>{{ r.uin }}</dd>
+        <dt>Phone</dt><dd>{{ r.phone }}</dd>
+        <dt>Pick up</dt><dd>{{ r.pickup_at|when }}</dd>
+        <dt>Return</dt><dd>{{ r.return_at|when }}</dd>
+        <dt>Destination</dt><dd>{{ r.destination }}</dd>
+        {% if r.purpose %}<dt>Purpose</dt><dd>{{ r.purpose }}</dd>{% endif %}
+        <dt>Vehicle type</dt><dd>{{ r.vehicle_type or 'Any' }}</dd>
+        {% if r.passengers %}<dt>Passengers</dt><dd>{{ r.passengers }}</dd>{% endif %}
+        <dt>Other drivers</dt><dd>{% for d in r.drivers %}{{ d.name }}{% if d.email %} <span class="muted">({{ d.email }})</span>{% endif %}{{ '' if loop.last else ', ' }}{% else %}<span class="muted">None</span>{% endfor %}</dd>
+        {% if r.notes %}<dt>Notes</dt><dd class="pre">{{ r.notes }}</dd>{% endif %}
+        {% if r.vehicle_label %}<dt>Vehicle</dt><dd><a href="{{ url_for('vehicle', vid=r.vehicle_id) }}">{{ r.vehicle_label }}</a></dd>{% endif %}
+      </dl>
+    </div>
+
+    <div class="stack">
+      {% if can_decide %}
+      <div class="card">
+        <h2>Decide</h2>
+        <form method="post" action="{{ url_for('res.decide', rid=r.reservation_id) }}" class="form-grid decide">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label><span>Vehicle to give them</span>
+            <select name="vehicle_id">
+              <option value="">Choose… (needed to approve)</option>
+              {% for o in vehicles %}
+              <option value="{{ o.vehicle_id }}" {{ 'disabled' if o.booked }}>{{ o.label }} · {{ o.vehicle_type }}{% if o.asset_number %} · {{ o.asset_number }}{% endif %}{% if o.booked %} · already reserved{% elif o.status != 'Available' %} · {{ o.status }}{% endif %}</option>
+              {% endfor %}
+            </select>
+            <span class="muted tiny">The type they asked for is listed first. Vehicles already reserved for that time can't be picked.</span>
+          </label>
+          <label><span>Message to {{ r.requester_name }}</span>
+            <textarea name="note" rows="3" placeholder="Needed to deny or to ask for information. Optional when approving."></textarea>
+          </label>
+          <div class="actions">
+            <button class="btn btn-primary" name="action" value="approve">{{ icon('check', 16) }} Approve</button>
+            <button class="btn" name="action" value="info">Ask for information</button>
+            <button class="btn ghost" name="action" value="deny">Deny</button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
+      <div class="card">
+        <h2>History</h2>
+        <ul class="res-history">
+          {% for e in events %}
+          <li><span class="muted small">{{ e.at.astimezone().strftime('%b %d, %I:%M %p') }}</span>
+              <span><b>{{ e.action }}</b>{% if e.by_name %} by {{ e.by_name }}{% endif %}{% if e.note %}<span class="detail muted small">"{{ e.note }}"</span>{% endif %}</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Emails</h2>
+        {% if not mail_on %}<p class="muted small">Email sending isn't switched on yet, so these wait in the outbox. They are sent as soon as it is.</p>{% endif %}
+        {% for m in emails %}
+        <details class="res-email">
+          <summary><span>{{ m.subject }}</span> <span class="muted tiny">to {{ m.to_email }} · {% if m.sent_at %}sent{% else %}waiting to send{% endif %}</span></summary>
+          <pre class="email-body">{{ m.body }}</pre>
+        </details>
+        {% else %}<p class="muted small">None yet.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
