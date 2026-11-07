@@ -23,7 +23,7 @@
       <td>{{ r.due_date.strftime('%b %d, %Y') if r.due_date else '' }}{% if r.due_mileage %}{{ ' or ' if r.due_date }}at {{ '{:,}'.format(r.due_mileage) }} mi{% endif %}{% if not r.due_date and not r.due_mileage %}—{% endif %}
         {% if r.status == 'Overdue' %}<span class="badge badge-overdue">Overdue</span>{% elif r.status == 'Due soon' %}<span class="badge badge-soon">Due soon</span>{% else %}<span class="badge">{{ r.status }}</span>{% endif %}</td>
       {% if user.can_edit %}
-      <td><form method="post" action="{{ url_for('maintenance_done', rid=r.rule_id) }}">
+      <td><form method="post" action="{{ url_for('maintenance_done', rid=r.rule_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="back" value="{{ request.full_path }}">
         <button class="btn tiny">Mark done</button></form></td>
       {% endif %}

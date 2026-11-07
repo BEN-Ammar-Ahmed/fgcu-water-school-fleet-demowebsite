@@ -20,7 +20,7 @@
     <a class="btn" href="{{ url_for('vehicle_edit', vid=v.vehicle_id) }}">{{ icon('edit', 16) }} Edit</a>
     {% if user.can_delete %}
     <form method="post" action="{{ url_for('vehicle_delete', vid=v.vehicle_id) }}"
-          onsubmit="return confirm('Delete this vehicle and all its maintenance rules and documents? This cannot be undone.')">
+          onsubmit="return confirm('Delete this vehicle and all its maintenance rules and documents? This cannot be undone.')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn danger">{{ icon('trash', 16) }} Delete vehicle</button></form>
     {% endif %}
   </div>
@@ -67,11 +67,11 @@
         <td>{% if r.status == 'Overdue' %}<span class="badge badge-overdue">Overdue</span>{% elif r.status == 'Due soon' %}<span class="badge badge-soon">Due soon</span>{% elif r.status %}<span class="badge">{{ r.status }}</span>{% endif %}</td>
         {% if user.can_edit %}
         <td class="row-actions">
-          <form method="post" action="{{ url_for('maintenance_done', rid=r.rule_id) }}">
+          <form method="post" action="{{ url_for('maintenance_done', rid=r.rule_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="back" value="{{ request.path }}#maintenance">
             <button class="btn tiny">{{ icon('check', 14) }} Mark done</button></form>
           {% if user.can_delete %}
-          <form method="post" action="{{ url_for('rule_delete', rid=r.rule_id) }}" onsubmit="return confirm('Remove this rule?')">
+          <form method="post" action="{{ url_for('rule_delete', rid=r.rule_id) }}" onsubmit="return confirm('Remove this rule?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn tiny ghost">Remove</button></form>
           {% endif %}
         </td>
@@ -84,7 +84,7 @@
   {% if user.can_edit and v.active %}
   <details class="add">
     <summary class="small">Add a schedule rule</summary>
-    <form method="post" action="{{ url_for('rule_add', vid=v.vehicle_id) }}" class="form-grid">
+    <form method="post" action="{{ url_for('rule_add', vid=v.vehicle_id) }}" class="form-grid"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Service<input name="maintenance_type" required placeholder="e.g. Tire Rotation"></label>
       <label>Every (miles)<input name="mileage_interval" type="number" min="1"></label>
       <label>Every (months)<input name="time_interval_months" type="number" min="1" value="6"></label>
@@ -162,7 +162,7 @@
         <td class="row-actions">
           <a class="btn tiny ghost" href="{{ url_for('doc_file', did=d.document_id, dl=1) }}">{{ icon('download', 14) }} Download</a>
           {% if user.can_delete %}
-          <form method="post" action="{{ url_for('doc_delete', did=d.document_id) }}" onsubmit="return confirm('Delete this document?')">
+          <form method="post" action="{{ url_for('doc_delete', did=d.document_id) }}" onsubmit="return confirm('Delete this document?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="back" value="{{ request.path }}#documents">
             <button class="btn tiny ghost">Delete</button></form>
           {% endif %}
@@ -174,7 +174,7 @@
   {% else %}<p class="muted">No documents you can see.</p>{% endif %}
 
   {% if user.can_edit %}
-  <form method="post" enctype="multipart/form-data" action="{{ url_for('doc_upload', vid=v.vehicle_id) }}" class="upload">
+  <form method="post" enctype="multipart/form-data" action="{{ url_for('doc_upload', vid=v.vehicle_id) }}" class="upload"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="drop">
       <input type="file" name="file" id="file" required>
       <label for="file">Choose a file to upload<br><span class="muted small">PDF, image, Word, Excel · up to 20 MB</span></label>

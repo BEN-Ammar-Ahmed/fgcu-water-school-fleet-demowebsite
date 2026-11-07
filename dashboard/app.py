@@ -4,7 +4,7 @@ Run:  python app.py      then open http://localhost:5000
 Database connection comes from the DATABASE_URL environment variable
 (default: your local water_school_fleet database).
 """
-import os, sys, uuid, datetime
+import os, sys, uuid, datetime, secrets
 from functools import wraps
 from pathlib import Path
 
@@ -199,6 +199,31 @@ def display_name(v):
 
 
 app.jinja_env.globals['display_name'] = display_name
+
+
+# ---------------------------------------------------------------------------
+# Form protection (CSRF): every form that saves something carries a secret from this person's
+# session, so another website can't make a signed-in person's browser submit a form here.
+# ---------------------------------------------------------------------------
+def csrf_token():
+    if '_csrf' not in session:
+        session['_csrf'] = secrets.token_urlsafe(32)
+    return session['_csrf']
+
+
+app.jinja_env.globals['csrf_token'] = csrf_token
+app.config.setdefault('CSRF_ENABLED', True)
+
+
+@app.before_request
+def check_csrf():
+    if request.method != 'POST' or not app.config['CSRF_ENABLED']:
+        return None
+    sent = request.form.get('csrf_token') or request.headers.get('X-CSRF-Token') or ''
+    if not session.get('_csrf') or not secrets.compare_digest(sent, session['_csrf']):
+        return error_page(400, 'This page was open too long or came from somewhere else. '
+                               'Go back, refresh the page, and try again.')
+    return None
 app.jinja_env.globals['change_text'] = __import__('changes').text
 
 MAINT_SQL = """

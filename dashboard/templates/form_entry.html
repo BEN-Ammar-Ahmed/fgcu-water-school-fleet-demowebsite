@@ -9,7 +9,7 @@
       {% for e in errors %}<div>{{ e }}</div>{% endfor %}
     </div>
   {% endif %}
-  <form method="post" class="card form-grid two">
+  <form method="post" class="card form-grid two"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% for f in fields %}
       {% set val = values.get(f.name) %}
       {% if f.kind == 'bool' %}

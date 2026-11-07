@@ -4,7 +4,7 @@
 <div class="login">
   <h1>Choose your account</h1>
   <p class="muted">What you can see and change depends on your access level.</p>
-  <form method="post" class="people">
+  <form method="post" class="people"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="next" value="{{ next }}">
     {% for p in people %}
       <button name="email" value="{{ p.email }}" class="person">

@@ -10,7 +10,7 @@
 
 <section class="card">
   <h2>Add a person</h2>
-  <form method="post" action="{{ url_for('admin.add_person') }}" class="form-grid" id="add-person">
+  <form method="post" action="{{ url_for('admin.add_person') }}" class="form-grid" id="add-person"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Full name<input name="full_name" value="{{ form.full_name or '' }}" required maxlength="100"></label>
     <label>FGCU email<input name="email" type="email" value="{{ form.email or '' }}" required maxlength="100" placeholder="name@fgcu.edu"></label>
     <label>Access level<select name="level">
@@ -40,7 +40,7 @@
       <td><b>{{ p.full_name }}</b><div class="muted small">{{ p.email or '' }}</div></td>
       <td>
         {% if p.changeable and p.active %}
-        <form method="post" action="{{ url_for('admin.change_level', uid=p.user_id) }}" class="inline">
+        <form method="post" action="{{ url_for('admin.change_level', uid=p.user_id) }}" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <select name="level" aria-label="Access level for {{ p.full_name }}" onchange="this.form.submit()">
             {% for l in assignable %}<option value="{{ l }}" {{ 'selected' if p.level == l }}>{{ level_labels[l] }}</option>{% endfor %}
           </select>
@@ -56,7 +56,7 @@
         {% elif p.changeable %}
         <form method="post" action="{{ url_for('admin.change_access', uid=p.user_id) }}" class="inline"
               data-name="{{ p.full_name }}"
-              {% if p.active %}onsubmit="return confirm('Remove access for ' + this.dataset.name + '? They will be signed out.')"{% endif %}>
+              {% if p.active %}onsubmit="return confirm('Remove access for ' + this.dataset.name + '? They will be signed out.')"{% endif %}><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="active" value="{{ '0' if p.active else '1' }}">
           <button class="btn tiny {{ 'danger' if p.active else 'ghost' }}">{{ 'Remove access' if p.active else 'Give access back' }}</button>
         </form>

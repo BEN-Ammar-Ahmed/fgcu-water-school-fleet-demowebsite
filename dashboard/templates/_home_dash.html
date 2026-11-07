@@ -21,7 +21,7 @@
         <div><a href="{{ url_for('vehicle', vid=r.vehicle_id) }}#maintenance">{{ display_name(r) }}</a>
           <span class="muted small">{{ r.maintenance_type }}</span></div>
         <span class="badge {{ 'badge-overdue' if r.status == 'Overdue' else 'badge-soon' }}">{{ r.status }}</span>
-        <form method="post" action="{{ url_for('maintenance_done', rid=r.rule_id) }}">
+        <form method="post" action="{{ url_for('maintenance_done', rid=r.rule_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="back" value="{{ url_for('dashboard') }}">
           <button class="btn tiny">Mark done</button></form>
       </div>

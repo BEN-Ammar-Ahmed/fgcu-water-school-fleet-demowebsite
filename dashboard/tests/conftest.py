@@ -77,6 +77,7 @@ def app_module(monkeypatch, tmp_path):
     monkeypatch.setattr(app_mod, 'DB_URL', TEST_URL)
     monkeypatch.setattr(app_mod, 'UPLOADS', tmp_path)
     app_mod.app.config['TESTING'] = True
+    app_mod.app.config['CSRF_ENABLED'] = False   # tests/test_csrf.py turns it back on
     return app_mod
 
 
