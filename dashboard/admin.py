@@ -36,19 +36,14 @@ def admin_context():
 # ---------------------------------------------------------------------------
 @bp.route('')
 def overview():
+    """Layout B: four numbers, then the latest activity (left) and what needs attention + who's online (right)."""
     q = core.q
-    by_level = {l: 0 for l in LEVELS}
-    for r in q("""SELECT r.role_name, count(*) n FROM wsb.app_user u JOIN wsb.app_role r USING (role_id)
-                  WHERE u.active GROUP BY r.role_name"""):
-        by_level[level_for_role(r['role_name'])] += r['n']
     online = q(f"""SELECT u.full_name, u.last_page, u.last_seen, r.role_name FROM wsb.app_user u
                    JOIN wsb.app_role r USING (role_id)
                    WHERE u.active AND u.last_seen > now() - interval '{ONLINE_MINUTES} minutes'
                    ORDER BY u.last_seen DESC""")
     for o in online:
         o['level'] = level_for_role(o['role_name'])
-    types = q("""SELECT vehicle_type, count(*) n FROM wsb.vehicle WHERE status <> 'Retired'
-                 GROUP BY 1 ORDER BY 2 DESC""")
     maint = core.maintenance()
     nums = q("""SELECT (SELECT count(*) FROM wsb.vehicle WHERE status <> 'Retired') AS vehicles,
                        (SELECT count(*) FROM wsb.trip WHERE start_datetime >= date_trunc('month', now())) AS trips,
@@ -59,16 +54,20 @@ def overview():
                        wsb.fiscal_year(CURRENT_DATE) AS fy,
                        (SELECT count(*) FROM wsb.vehicle_document
                          WHERE expiration_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 60) AS expiring""", one=True)
-    top_vehicles = q("""SELECT v.vehicle_id, v.year, v.make, v.model, v.notes, count(*) n
-                        FROM wsb.trip t JOIN wsb.vehicle v USING (vehicle_id)
-                        WHERE t.start_datetime >= date_trunc('month', now())
-                        GROUP BY v.vehicle_id ORDER BY n DESC, v.vehicle_id LIMIT 5""")
-    recent = q('SELECT * FROM wsb.activity_log ORDER BY activity_id DESC LIMIT 5')
+    recent = q('SELECT * FROM wsb.activity_log ORDER BY activity_id DESC LIMIT 10')
     g.page_label = 'Admin: Overview'
-    return render_template('admin/overview.html', by_level=by_level, people=sum(by_level.values()), online=online,
-                           types=types, nums=nums, overdue=sum(m['status'] == 'Overdue' for m in maint),
-                           soon=sum(m['status'] == 'Due soon' for m in maint), top_vehicles=top_vehicles,
-                           top_max=max([t['n'] for t in top_vehicles] or [1]), recent=recent)
+    return render_template('admin/overview.html', online=online, nums=nums, recent=recent,
+                           overdue=sum(m['status'] == 'Overdue' for m in maint),
+                           soon=sum(m['status'] == 'Due soon' for m in maint))
+
+
+def level_counts():
+    """Active people per level, for the People page."""
+    counts = {l: 0 for l in LEVELS}
+    for r in core.q("""SELECT r.role_name, count(*) n FROM wsb.app_user u JOIN wsb.app_role r USING (role_id)
+                       WHERE u.active GROUP BY r.role_name"""):
+        counts[level_for_role(r['role_name'])] += r['n']
+    return counts
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +106,7 @@ def _render_people(errors=(), form=None, status=200):
     for r in rows:
         r['changeable'] = r['user_id'] != me.user_id and can_change(me, r['level'])
     g.page_label = 'Admin: People & access'
-    return render_template('admin/people.html', rows=rows, me=me, assignable=assignable_levels(me),
+    return render_template('admin/people.html', rows=rows, me=me, assignable=assignable_levels(me), by_level=level_counts(),
                            errors=errors, form=form or {}, text=text, show=show), status
 
 

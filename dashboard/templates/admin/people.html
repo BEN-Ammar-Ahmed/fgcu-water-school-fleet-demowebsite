@@ -4,6 +4,7 @@
 <div class="head">
   <div><h1>People &amp; access</h1><p class="muted">Who can sign in, what they can see, and what they can change.</p></div>
 </div>
+<p class="level-chips" data-levels>{% for l, n in by_level.items() %}<a class="chip" href="{{ url_for('admin.people', show=l) }}"><b>{{ n }}</b> {{ level_labels[l] }}</a>{% endfor %}</p>
 
 {% if errors %}<div class="flash flash-error" role="alert">{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div>{% endif %}
 
