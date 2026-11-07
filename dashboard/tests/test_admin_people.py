@@ -18,7 +18,7 @@ def _access_rows(dbq):
 def test_people_page_lists_everyone(client, sign_in):
     sign_in(client, 'demo_tier1')
     page = client.get('/admin/people').get_data(as_text=True)
-    for name in ('Demo Fleet Manager', 'Demo Backup Manager', 'Demo Boat Captain', 'Demo Campus Staff', 'Demo Former Staff'):
+    for name in ('Fleet Manager', 'Backup Fleet Manager', 'Boat Captain', 'Campus Staff', 'Former Staff'):
         assert name in page
     assert 'Top admin' in page and 'Access removed' in page
 

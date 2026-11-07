@@ -11,7 +11,7 @@ def test_topbar_shows_user_and_tier(client, sign_in):
     r = client.get('/help')
     assert r.status_code == 200
     page = r.get_data(as_text=True)
-    assert 'Demo Campus Staff' in page and 'Tier 2' in page
+    assert 'Campus Staff' in page and 'Tier 2' in page
     assert '+ Add' not in page and 'id="add-menu"' not in page
 
 

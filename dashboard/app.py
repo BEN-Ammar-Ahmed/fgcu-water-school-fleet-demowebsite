@@ -240,7 +240,7 @@ def maintenance(extra='', args=()):
 
 
 # ---------------------------------------------------------------------------
-# Sign-in (FGCU placeholder + demo sign-in)
+# Sign-in (FGCU placeholder + account picker for the test accounts)
 # ---------------------------------------------------------------------------
 @app.route('/login')
 def login():
@@ -250,11 +250,11 @@ def login():
 @app.route('/login/fgcu')
 def login_fgcu():
     # Placeholder: FGCU sign-in (likely Microsoft Entra ID) gets connected here later.
-    return redirect(url_for('login_demo', next=request.args.get('next', '')))
+    return redirect(url_for('login_account', next=request.args.get('next', '')))
 
 
-@app.route('/login/demo', methods=['GET', 'POST'])
-def login_demo():
+@app.route('/login/account', methods=['GET', 'POST'])
+def login_account():
     nxt = request.values.get('next') or ''
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
@@ -268,7 +268,7 @@ def login_demo():
                   ORDER BY r.role_name, u.full_name""", ('%' + DEMO_DOMAIN,))
     for p in people:
         p['level_label'] = LEVEL_LABELS[level_for_role(p['role_name'])]
-    return render_template('demo_signin.html', people=people, next=nxt)
+    return render_template('account_signin.html', people=people, next=nxt)
 
 
 @app.route('/logout')

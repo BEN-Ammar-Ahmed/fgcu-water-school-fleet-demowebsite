@@ -1,16 +1,16 @@
 def test_unknown_email_gets_no_access(client):
-    r = client.post('/login/demo', data={'email': 'nobody@fgcu.edu'})
+    r = client.post('/login/account', data={'email': 'nobody@fgcu.edu'})
     assert r.status_code == 403
     assert "You don't have access yet" in r.get_data(as_text=True)
 
 
 def test_inactive_user_cannot_sign_in(client):
-    r = client.post('/login/demo', data={'email': 'former.staff@example.edu'})
+    r = client.post('/login/account', data={'email': 'former.staff@example.edu'})
     assert r.status_code == 403
 
 
 def test_known_email_signs_in(client):
-    r = client.post('/login/demo', data={'email': 'Campus.Staff@example.edu'})
+    r = client.post('/login/account', data={'email': 'Campus.Staff@example.edu'})
     assert r.status_code == 302
     with client.session_transaction() as s:
         assert s.get('user_id')

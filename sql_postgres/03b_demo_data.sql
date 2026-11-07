@@ -189,9 +189,9 @@ LEFT JOIN wsb.invoice_line AS l ON l.invoice_id = i.invoice_id AND l.description
 -- App users (names only; real logins are created with wsb.create_wsb_user) ----
 INSERT INTO wsb.app_user (username, full_name, email, role_id)
 SELECT u.un, u.fn, u.em, r.role_id
-FROM (VALUES ('demo_admin','Demo Admin','demo_admin@example.edu','Admin'),
-             ('demo_staff','Demo Staff','demo_staff@example.edu','Staff'),
-             ('demo_viewer','Demo Viewer','demo_viewer@example.edu','Read-only')) AS u(un, fn, em, rn)
+FROM (VALUES ('demo_admin','Office Admin','demo_admin@example.edu','Admin'),
+             ('demo_staff','Field Staff','demo_staff@example.edu','Staff'),
+             ('demo_viewer','Visitor Center','demo_viewer@example.edu','Read-only')) AS u(un, fn, em, rn)
 JOIN wsb.app_role AS r ON r.role_name = u.rn
 ON CONFLICT (username) DO NOTHING;
 

@@ -1,19 +1,18 @@
 {% extends 'base.html' %}
-{% block title %}Demo sign-in{% endblock %}
+{% block title %}Sign in{% endblock %}
 {% block body %}
 <div class="login">
-  <h1>Demo sign-in</h1>
-  <p class="muted">Stand-in for FGCU sign-in. Choose a person; their access comes from the database.</p>
+  <h1>Choose your account</h1>
+  <p class="muted">What you can see and change depends on your access level.</p>
   <form method="post" class="people">
     <input type="hidden" name="next" value="{{ next }}">
     {% for p in people %}
       <button name="email" value="{{ p.email }}" class="person">
         <span class="name">{{ p.full_name }}</span>
-        <span class="muted small">{{ p.email }}</span>
         <span class="badge">{{ p.level_label }}</span>
       </button>
     {% else %}
-      <p class="muted">No active users yet. Run sql_postgres/09_demo_users.sql.</p>
+      <p class="muted">No accounts yet. Ask the fleet manager to add you.</p>
     {% endfor %}
   </form>
 </div>

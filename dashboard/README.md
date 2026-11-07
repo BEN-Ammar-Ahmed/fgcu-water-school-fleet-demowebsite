@@ -38,7 +38,7 @@ People are rows in `wsb.app_user`. To give someone access, add a row with their 
 ## Sign-in (placeholder)
 
 `/login` shows "Sign in with FGCU". Until FGCU IT connects real single sign-on, `/login/fgcu` forwards to a
-demo sign-in (`/login/demo`). It only lists and accepts the fictional `@example.edu` users,
+demo sign-in (`/login/account`). It only lists and accepts the fictional `@example.edu` users,
 so real people in `wsb.app_user` can't be signed in as through it.
 
 **Where real sign-in plugs in:** replace `login_fgcu()` in `app.py` with the FGCU / Microsoft Entra ID flow, and

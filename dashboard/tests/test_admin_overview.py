@@ -40,7 +40,7 @@ def test_overview_is_decluttered(client, sign_in):
 
 def test_overview_shows_edit_details(client, sign_in, dbq):
     dbq("""INSERT INTO wsb.activity_log (full_name, kind, summary, details) VALUES
-           ('Demo Fleet Manager', 'change', 'Edited vehicle X', '[{"field": "Mileage", "old": "41,200", "new": "42,050"}]')""")
+           ('Fleet Manager', 'change', 'Edited vehicle X', '[{"field": "Mileage", "old": "41,200", "new": "42,050"}]')""")
     sign_in(client, 'demo_tier1')
     assert 'Mileage: 41,200 → 42,050' in client.get('/admin').get_data(as_text=True)
 
@@ -60,12 +60,12 @@ def test_signed_in_now_list(client, sign_in, dbq):
     page = client.get('/admin').get_data(as_text=True)
     online = page[page.index('id="online"'):]
     online = online[:online.index('</section>')]
-    assert 'Demo Boat Captain' in online and 'Search: Sea Ark' in online
-    assert 'Demo Campus Staff' not in online
+    assert 'Boat Captain' in online and 'Search: Sea Ark' in online
+    assert 'Campus Staff' not in online
 
 
 def test_recent_activity_on_overview(client, sign_in, dbq):
-    client.post('/login/demo', data={'email': 'campus.staff@example.edu'})
+    client.post('/login/account', data={'email': 'campus.staff@example.edu'})
     sign_in(client, 'demo_tier1')
     page = client.get('/admin').get_data(as_text=True)
-    assert 'Demo Campus Staff' in page and 'Signed in' in page
+    assert 'Campus Staff' in page and 'Signed in' in page

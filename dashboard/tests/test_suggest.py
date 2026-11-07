@@ -62,7 +62,7 @@ def test_people_and_activity_admin_only(client, sign_in):
     assert _get(client, 'people', 'demo')['groups'] == []
     assert _get(client, 'activity', 'demo')['groups'] == []
     sign_in(client, 'demo_tier1')
-    assert 'Demo Boat Captain' in _labels(_get(client, 'people', 'boat'))
+    assert 'Boat Captain' in _labels(_get(client, 'people', 'boat'))
 
 
 def test_viewer_gets_no_form_suggestions(client, sign_in):

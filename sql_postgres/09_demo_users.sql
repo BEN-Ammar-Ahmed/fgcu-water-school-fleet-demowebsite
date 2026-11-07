@@ -11,12 +11,12 @@
 INSERT INTO wsb.app_user (username, full_name, email, role_id, can_see_licenses, active)
 SELECT u.username, u.full_name, u.email, r.role_id, u.licenses, u.active
 FROM (VALUES
-    ('demo_tier1',          'Demo Fleet Manager',    'fleet.manager@example.edu',    'Top admin', TRUE,  TRUE),
-    ('demo_tier1_backup',   'Demo Backup Manager',   'fleet.backup@example.edu',     'Admin',     FALSE, TRUE),
-    ('demo_editor',         'Demo Boat Captain',     'editor.staff@example.edu',     'Staff',     FALSE, TRUE),
-    ('demo_tier2',          'Demo Campus Staff',     'campus.staff@example.edu',     'Read-only', FALSE, TRUE),
-    ('demo_tier2_licenses', 'Demo Insurance Office', 'insurance.office@example.edu', 'Read-only', FALSE, TRUE),
-    ('demo_inactive',       'Demo Former Staff',     'former.staff@example.edu',     'Read-only', FALSE, FALSE)
+    ('demo_tier1',          'Fleet Manager',    'fleet.manager@example.edu',    'Top admin', TRUE,  TRUE),
+    ('demo_tier1_backup',   'Backup Fleet Manager',   'fleet.backup@example.edu',     'Admin',     FALSE, TRUE),
+    ('demo_editor',         'Boat Captain',     'editor.staff@example.edu',     'Staff',     FALSE, TRUE),
+    ('demo_tier2',          'Campus Staff',     'campus.staff@example.edu',     'Read-only', FALSE, TRUE),
+    ('demo_tier2_licenses', 'Insurance Office', 'insurance.office@example.edu', 'Read-only', FALSE, TRUE),
+    ('demo_inactive',       'Former Staff',     'former.staff@example.edu',     'Read-only', FALSE, FALSE)
 ) AS u(username, full_name, email, role_name, licenses, active)
 JOIN wsb.app_role AS r ON r.role_name = u.role_name
 ON CONFLICT (username) DO UPDATE

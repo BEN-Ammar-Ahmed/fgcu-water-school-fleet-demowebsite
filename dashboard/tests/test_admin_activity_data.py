@@ -2,7 +2,7 @@
 import pytest
 
 
-def _log(dbq, kind, summary, who='Demo Campus Staff', at="now()"):
+def _log(dbq, kind, summary, who='Campus Staff', at="now()"):
     dbq(f"INSERT INTO wsb.activity_log (full_name, kind, summary, at) VALUES (%s, %s, %s, {at})", (who, kind, summary))
 
 
@@ -15,7 +15,7 @@ def test_viewers_and_editors_cannot_open(client, sign_in, path):
 
 def test_activity_newest_first_and_filters(client, sign_in, dbq):
     _log(dbq, 'view', 'Vehicle: old one', at="now() - interval '3 days'")
-    _log(dbq, 'change', 'Added a trip · F-250', who='Demo Boat Captain')
+    _log(dbq, 'change', 'Added a trip · F-250', who='Boat Captain')
     _log(dbq, 'download', 'Opened Registration')
     sign_in(client, 'demo_tier1_backup')
     page = client.get('/admin/activity').get_data(as_text=True)
