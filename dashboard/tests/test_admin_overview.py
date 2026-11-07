@@ -65,7 +65,7 @@ def test_signed_in_now_list(client, sign_in, dbq):
 
 
 def test_recent_activity_on_overview(client, sign_in, dbq):
-    client.post('/login/account', data={'email': 'campus.staff@example.edu'})
+    client.post('/login', data={'password': 'test-password-1', 'username': 'campus.staff@example.edu'})
     sign_in(client, 'demo_tier1')
     page = client.get('/admin').get_data(as_text=True)
     assert 'Campus Staff' in page and 'Signed in' in page

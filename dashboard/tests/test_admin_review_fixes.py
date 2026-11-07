@@ -55,7 +55,7 @@ def test_editor_with_trips_switch_logs_a_trip(client, sign_in, dbq):
 
 
 def test_demo_users_can_be_deleted_after_signing_in(client, dbq):
-    client.post('/login/account', data={'email': 'campus.staff@example.edu'})
+    client.post('/login', data={'password': 'test-password-1', 'username': 'campus.staff@example.edu'})
     dbq("DELETE FROM wsb.app_user WHERE username = 'demo_tier2'")
     assert dbq("SELECT count(*) n FROM wsb.activity_log WHERE username = 'demo_tier2'")[0]['n'] == 1
 
@@ -71,7 +71,7 @@ def test_activity_text_filter_with_underscore_and_percent(client, sign_in, dbq):
 
 def test_signed_out_people_are_not_shown_as_signed_in(client, sign_in, dbq, app_module):
     other = app_module.app.test_client()
-    other.post('/login/account', data={'email': 'editor.staff@example.edu'})
+    other.post('/login', data={'password': 'test-password-1', 'username': 'editor.staff@example.edu'})
     other.get('/help')
     other.get('/logout')
     assert dbq("SELECT last_seen FROM wsb.app_user WHERE username = 'demo_editor'")[0]['last_seen'] is None

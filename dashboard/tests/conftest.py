@@ -27,6 +27,9 @@ DASHBOARD = HERE.parent
 SQL_DIR = DASHBOARD.parent / 'sql_postgres'
 sys.path.insert(0, str(DASHBOARD))
 
+# Every test account gets this password (test database only; never in sql_postgres/).
+TEST_PASSWORD = 'test-password-1'
+
 SQL_FILES = [
     '01_schema.sql', '02_security.sql', '03_reference_data.sql', '03b_demo_data.sql',
     '04_import_staging.sql', '05_procedures.sql', '07_web_access.sql', '08_admin_levels.sql', '09_demo_users.sql',
@@ -34,6 +37,8 @@ SQL_FILES = [
     '11_vehicle_name.sql',
     '12_tiers.sql',
     '13_reservations.sql',
+    '14_passwords.sql',
+    '15_public_reservations.sql',
 ]
 
 
@@ -63,6 +68,9 @@ def template_db():
             path = SQL_DIR / name
             if path.exists():
                 cur.execute(path.read_text(encoding='utf-8'))
+        from werkzeug.security import generate_password_hash
+        cur.execute("""INSERT INTO wsb.app_user_password (user_id, password_hash, must_change)
+                       SELECT user_id, %s, FALSE FROM wsb.app_user""", (generate_password_hash(TEST_PASSWORD),))
     t.close()
     yield
 
@@ -109,3 +117,14 @@ def sign_in(dbq):
             s.clear()
             s['user_id'] = uid
     return do
+
+
+@pytest.fixture()
+def reserve(app_module, monkeypatch):
+    """Test client for the separate vehicle request site (reserve_app.py), on the same test database."""
+    import reserve_app
+    monkeypatch.setattr(reserve_app, 'DB_URL', TEST_URL)
+    reserve_app.app.config['TESTING'] = True
+    reserve_app.app.config['CSRF_ENABLED'] = False
+    reserve_app._recent.clear()
+    return reserve_app.app.test_client()

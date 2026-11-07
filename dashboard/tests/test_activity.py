@@ -14,7 +14,7 @@ def _last(dbq, kind=None):
 
 
 def test_sign_in_is_logged(client, dbq):
-    client.post('/login/account', data={'email': 'campus.staff@example.edu'})
+    client.post('/login', data={'password': 'test-password-1', 'username': 'campus.staff@example.edu'})
     row = _last(dbq, 'sign-in')
     assert row and row['username'] == 'demo_tier2' and row['full_name'] == 'Campus Staff'
 
@@ -67,7 +67,7 @@ def test_document_download_is_logged(client, sign_in, dbq, app_module):
 @pytest.mark.parametrize('sql', ['UPDATE wsb.activity_log SET summary = %s', 'DELETE FROM wsb.activity_log',
                                  'TRUNCATE wsb.activity_log'])
 def test_log_cannot_be_changed(client, dbq, sql):
-    client.post('/login/account', data={'email': 'campus.staff@example.edu'})
+    client.post('/login', data={'password': 'test-password-1', 'username': 'campus.staff@example.edu'})
     with pytest.raises(psycopg2.Error):
         dbq(sql, ('x',) if '%s' in sql else None)
     assert _last(dbq, 'sign-in') is not None

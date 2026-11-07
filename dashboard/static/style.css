@@ -115,10 +115,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--ink); outline: n
 
 /* Sign-in */
 .login { max-width: 460px; margin: 10vh auto 0; text-align: center; }
-.people { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; text-align: left; }
-.person { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font: inherit; cursor: pointer; text-align: left; }
-.person:hover { border-color: var(--ink); }
-.person .name { font-weight: 600; }
+.login-form { display: grid; gap: 12px; margin-top: 18px; text-align: left; }
+.login-form label { display: grid; gap: 4px; font-size: 14px; font-weight: 500; }
+.login-form input { font: inherit; padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.login-form input:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+.login-form .btn { justify-content: center; padding: 10px; }
+.login .flash { text-align: left; }
 
 /* Old dashboard pieces (until every page is rewritten) */
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
@@ -319,3 +321,22 @@ a.stat:hover { border-color: var(--ink2); }
 .res-table td:nth-child(n+2) { min-width: 9em; }   /* readable dates on phones (the table scrolls) */
 @media (max-width: 900px) { .navtext { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
 @media (max-width: 520px) { .brand-text, .who .badge { display: none; } .topnav { gap: 10px; } }
+a.who { text-decoration: none; color: var(--ink); }
+.pw-reset { display: flex; gap: 6px; padding: 6px 0; }
+.pw-reset input { font: inherit; font-size: 13px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 6px; min-width: 0; flex: 1; }
+/* Needs attention: name | status | button, each in its own column so they line up row to row */
+#attention .dash-row { display: grid; grid-template-columns: minmax(0, 1fr) 92px 96px; gap: 12px; }
+#attention .dash-row .badge { justify-self: start; }
+#attention .dash-row form { justify-self: end; }
+@media (max-width: 520px) { #attention .dash-row { grid-template-columns: minmax(0, 1fr) auto; } #attention .dash-row form { grid-column: 2; } }
+/* Vehicle request site (reserve_app.py) */
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.when-form { grid-template-columns: 1fr 1fr 180px auto; align-items: end; }
+.when-form .actions { padding-bottom: 2px; }
+.pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.pick { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 6px 12px; align-items: center; margin: 0; }
+.pick .pick-text { display: flex; flex-direction: column; min-width: 0; }
+.pick .btn { grid-column: 1 / -1; justify-content: center; }
+.reserve-site .topbar { justify-content: flex-start; }
+@media (max-width: 900px) { .when-form { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .when-form { grid-template-columns: 1fr; } }

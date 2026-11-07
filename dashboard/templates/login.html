@@ -5,7 +5,18 @@
   <img class="login-logo" src="{{ url_for('static', filename='logo.svg') }}" alt="" width="48" height="48">
   <p class="muted small login-org">FGCU Water School</p>
   <h1>Fleet</h1>
-  <p class="muted">Sign in with your FGCU account.</p>
-  <p><a class="btn btn-primary" href="{{ url_for('login_fgcu', next=next) }}">Sign in with FGCU</a></p>
+  {% if error %}<div class="flash flash-error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="{{ url_for('login') }}" class="login-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>Username or email
+      <input name="username" value="{{ username or '' }}" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+    </label>
+    <label>Password
+      <input name="password" type="password" autocomplete="current-password" required>
+    </label>
+    <button class="btn btn-primary">Sign in</button>
+  </form>
+  <p class="muted small">Forgot your password or don't have an account? Ask the fleet manager.</p>
 </div>
 {% endblock %}

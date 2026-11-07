@@ -1,37 +1,31 @@
 {% extends 'base.html' %}
 {% from '_res.html' import status_badge %}
-{% block title %}{{ 'Reservations' if mode == 'inbox' else 'My vehicle requests' }}{% endblock %}
+{% block title %}Reservations{% endblock %}
 {% block body %}
 <div class="res-page">
   <div class="res-head">
-    <h1>{{ 'Reservations' if mode == 'inbox' else 'My vehicle requests' }}</h1>
+    <h1>Reservations</h1>
     <div class="actions">
-      {% if mode == 'inbox' %}<a class="btn ghost" href="{{ url_for('res.mine') }}">My requests</a>
-      {% elif user.can('approve') %}<a class="btn ghost" href="{{ url_for('res.inbox') }}">All reservations</a>{% endif %}
-      <a class="btn btn-primary" href="{{ url_for('res.request_form') }}">{{ icon('plus', 16) }} Request a vehicle</a>
+      <a class="btn ghost" href="{{ reserve_site }}" target="_blank" rel="noopener">Open the request site ↗</a>
     </div>
   </div>
-  {% if mode == 'inbox' %}
-  <p class="muted">New requests land here. Open one to approve it, deny it, or ask for missing information. The requester gets an email each time.</p>
+  <p class="muted">Requests from the vehicle request site land here. Open one to approve it, deny it, or ask for missing information. The requester gets an email each time.</p>
   <nav class="chips res-tabs" aria-label="Filter by status">
     {% for s in tabs %}<a class="chip {{ 'on' if s == status }}" href="{{ url_for('res.inbox', status=s) }}">{{ s }}{% if s != 'All' and counts.get(s) %} · {{ counts[s] }}{% endif %}</a>{% endfor %}
   </nav>
-  {% else %}
-  <p class="muted">Requests you sent. Open one to see its status, update it, or cancel it.</p>
-  {% endif %}
 
   {% if rows %}
   <div class="card flush table-wrap">
     <table class="table res-table">
-      <thead><tr><th>#</th>{% if mode == 'inbox' %}<th>Requested by</th>{% endif %}<th>When</th><th>Destination</th><th>Vehicle</th><th>Status</th></tr></thead>
+      <thead><tr><th>#</th><th>Requested by</th><th>When</th><th>Destination</th><th>Vehicle</th><th>Status</th></tr></thead>
       <tbody>
       {% for r in rows %}
         <tr>
           <td><a href="{{ url_for('res.detail', rid=r.reservation_id) }}">#{{ r.reservation_id }}</a></td>
-          {% if mode == 'inbox' %}<td><a href="{{ url_for('res.detail', rid=r.reservation_id) }}">{{ r.requester_name }}</a><div class="muted tiny">{{ r.requester_email }}</div></td>{% endif %}
+          <td><a href="{{ url_for('res.detail', rid=r.reservation_id) }}">{{ r.requester_name }}</a><div class="muted tiny">{{ r.requester_email }}</div></td>
           <td>{{ r.pickup_at|when }}<div class="muted tiny">until {{ r.return_at|when }}</div></td>
           <td>{{ r.destination }}{% if r.purpose %}<div class="muted tiny">{{ r.purpose }}</div>{% endif %}</td>
-          <td>{% if r.vehicle_label %}{{ r.vehicle_label }}{% else %}<span class="muted">{{ r.vehicle_type or 'Any' }}</span>{% endif %}</td>
+          <td>{% if r.vehicle_id %}{{ r.vehicle_label }}{% elif r.requested_label %}{{ r.requested_label }} <span class="muted tiny">(asked for)</span>{% else %}<span class="muted">Any {{ (r.vehicle_type or 'vehicle')|lower }}</span>{% endif %}</td>
           <td>{{ status_badge(r.status) }}</td>
         </tr>
       {% endfor %}
@@ -39,7 +33,7 @@
     </table>
   </div>
   {% else %}
-  <div class="card muted">{% if mode == 'inbox' %}No {{ '' if status == 'All' else status|lower ~ ' ' }}requests.{% else %}You haven't requested a vehicle yet.{% endif %}</div>
+  <div class="card muted">No {{ '' if status == 'All' else status|lower ~ ' ' }}requests.</div>
   {% endif %}
 </div>
 {% endblock %}

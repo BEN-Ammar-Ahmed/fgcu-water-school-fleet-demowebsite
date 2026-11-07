@@ -7,6 +7,8 @@ Only admins and top admins get in. The rules for who may change whom are in tier
 import re
 
 import psycopg2
+
+import passwords
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from tiers import (DEFAULTS, LEVEL_LABELS, LEVELS, PERMS, ROLE_FOR_LEVEL, assignable_levels, can_change,
@@ -86,8 +88,11 @@ def _people():
     rows = core.q(f"""SELECT u.user_id, u.username, u.full_name, u.email, u.active, u.last_seen, r.role_name,
                              u.last_seen > now() - interval '{ONLINE_MINUTES} minutes' AS online,
                              ARRAY(SELECT p.permission FROM wsb.app_user_permission p
-                                   WHERE p.user_id = u.user_id) AS extras
-                      FROM wsb.app_user u JOIN wsb.app_role r USING (role_id)""")
+                                   WHERE p.user_id = u.user_id) AS extras,
+                             pw.user_id IS NOT NULL AS has_password, pw.must_change,
+                             pw.locked_until > now() AS locked
+                      FROM wsb.app_user u JOIN wsb.app_role r USING (role_id)
+                      LEFT JOIN wsb.app_user_password pw ON pw.user_id = u.user_id""")
     order = {l: i for i, l in enumerate(LEVELS)}
     for r in rows:
         r['level'] = level_for_role(r['role_name'])
@@ -134,6 +139,7 @@ def _username_for(email):
 def add_person():
     me = core.current_user()
     form = {k: (request.form.get(k) or '').strip() for k in ('full_name', 'email', 'level')}
+    temp = request.form.get('password') or ''
     if form['level'] not in LEVELS or form['level'] not in assignable_levels(me):
         abort(403)
     errors = []
@@ -143,17 +149,21 @@ def add_person():
         errors.append('Enter a valid email address.')
     elif core.q('SELECT 1 FROM wsb.app_user WHERE lower(email) = lower(%s)', (form['email'],), one=True):
         errors.append('That email already has access (or is in the list with access removed).')
+    errors += [p.replace('The new password', 'The temporary password') for p in passwords.problems(temp, None)]
     if errors:
         return _render_people(errors, form)
     role = core.q('SELECT role_id FROM wsb.app_role WHERE role_name = %s', (ROLE_FOR_LEVEL[form['level']],), one=True)
     try:
-        core.run("""INSERT INTO wsb.app_user (username, full_name, email, role_id, active)
-                    VALUES (%s, %s, %s, %s, TRUE)""",
-                 (_username_for(form['email']), form['full_name'][:100], form['email'][:100], role['role_id']))
+        username = _username_for(form['email'])
+        uid = core.run("""INSERT INTO wsb.app_user (username, full_name, email, role_id, active)
+                          VALUES (%s, %s, %s, %s, TRUE) RETURNING user_id""",
+                       (username, form['full_name'][:100], form['email'][:100], role['role_id']))['user_id']
+        passwords.set_password(core.run, uid, temp, must_change=True)
     except psycopg2.Error:
         return _render_people(['Could not add that person. Check the name and email.'], form)
     core.log_activity('access', f"Added {form['full_name']} ({form['email']}) as {LEVEL_LABELS[form['level']]}")
-    flash(f"{form['full_name']} can now sign in as {LEVEL_LABELS[form['level']]}.", 'ok')
+    flash(f"{form['full_name']} can now sign in as {LEVEL_LABELS[form['level']]}. Give them their username "
+          f"({username}) and the temporary password; they choose their own the first time they sign in.", 'ok')
     return redirect(url_for('admin.people'))
 
 
@@ -199,6 +209,21 @@ def change_access(uid):
     core.log_activity('access', f"{'Gave back' if active else 'Removed'} {t['full_name']}'s access",
                       details=[{'field': 'Can sign in', 'old': 'No' if active else 'Yes', 'new': 'Yes' if active else 'No'}])
     flash(f"{t['full_name']} {'can sign in again' if active else 'can no longer sign in'}.", 'ok')
+    return redirect(url_for('admin.people'))
+
+
+@bp.route('/people/<int:uid>/password', methods=['POST'])
+def reset_password(uid):
+    """Give someone a temporary password (forgot it, or locked out). They must change it at next sign-in."""
+    _, t = _target(uid)
+    temp = request.form.get('password') or ''
+    problems = passwords.problems(temp, None)
+    if problems:
+        flash(problems[0].replace('The new password', 'The temporary password'), 'error')
+        return redirect(url_for('admin.people'))
+    passwords.set_password(core.run, uid, temp, must_change=True)
+    core.log_activity('access', f"Set a temporary password for {t['full_name']}")
+    flash(f"Saved. Give {t['full_name']} the temporary password; they choose their own when they sign in.", 'ok')
     return redirect(url_for('admin.people'))
 
 

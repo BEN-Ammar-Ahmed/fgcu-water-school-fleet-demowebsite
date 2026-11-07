@@ -39,5 +39,5 @@ def test_transitional_helper_removed():
 
 def test_readme_covers_maintainers():
     text = (DASH / 'README.md').read_text(encoding='utf-8')
-    for needle in ('07_web_access.sql', 'pytest', 'sign_in_email', 'docker run', 'DATABASE_URL'):
+    for needle in ('set_password.py', 'pytest', 'reserve_app.py', 'docker run', 'DATABASE_URL', 'RESERVE_URL'):
         assert needle in text, needle

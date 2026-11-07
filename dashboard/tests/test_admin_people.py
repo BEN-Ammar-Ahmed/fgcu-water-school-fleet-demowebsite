@@ -27,14 +27,14 @@ def test_top_admin_adds_people_at_each_tier(client, sign_in, dbq):
     sign_in(client, 'demo_tier1')
     for email, level, role in (('new.top@fgcu.edu', 'top_admin', 'Top admin'), ('cap@fgcu.edu', 'editor', 'Staff'),
                                ('view@fgcu.edu', 'viewer', 'Read-only')):
-        r = client.post('/admin/people', data={'full_name': 'New ' + level, 'email': email, 'level': level})
+        r = client.post('/admin/people', data={'password': 'temp-pass-42', 'full_name': 'New ' + level, 'email': email, 'level': level})
         assert r.status_code == 302 and _role(dbq, email) == (role, True)
     assert _access_rows(dbq) == 3
 
 
 def test_old_admin_level_is_refused(client, sign_in, dbq):
     sign_in(client, 'demo_tier1')
-    r = client.post('/admin/people', data={'full_name': 'Old', 'email': 'old@fgcu.edu', 'level': 'admin'})
+    r = client.post('/admin/people', data={'password': 'temp-pass-42', 'full_name': 'Old', 'email': 'old@fgcu.edu', 'level': 'admin'})
     assert r.status_code in (400, 403) and _role(dbq, 'old@fgcu.edu') is None
 
 
@@ -104,11 +104,11 @@ def test_always_keeps_a_top_admin(app_module, dbq):
 def test_bad_input_gives_plain_messages(client, sign_in, dbq):
     sign_in(client, 'demo_tier1')
     before = dbq('SELECT count(*) n FROM wsb.app_user')[0]['n']
-    page = client.post('/admin/people', data={'full_name': 'Dup', 'email': 'Campus.Staff@example.edu', 'level': 'viewer'}).get_data(as_text=True)
+    page = client.post('/admin/people', data={'password': 'temp-pass-42', 'full_name': 'Dup', 'email': 'Campus.Staff@example.edu', 'level': 'viewer'}).get_data(as_text=True)
     assert 'already has access' in page
-    page = client.post('/admin/people', data={'full_name': ' ', 'email': 'x@fgcu.edu', 'level': 'viewer'}).get_data(as_text=True)
+    page = client.post('/admin/people', data={'password': 'temp-pass-42', 'full_name': ' ', 'email': 'x@fgcu.edu', 'level': 'viewer'}).get_data(as_text=True)
     assert 'Enter a name' in page
-    page = client.post('/admin/people', data={'full_name': 'X', 'email': 'not-an-email', 'level': 'viewer'}).get_data(as_text=True)
+    page = client.post('/admin/people', data={'password': 'temp-pass-42', 'full_name': 'X', 'email': 'not-an-email', 'level': 'viewer'}).get_data(as_text=True)
     assert 'Enter a valid email' in page
-    assert client.post('/admin/people', data={'full_name': 'X', 'email': 'y@fgcu.edu', 'level': 'boss'}).status_code == 403
+    assert client.post('/admin/people', data={'password': 'temp-pass-42', 'full_name': 'X', 'email': 'y@fgcu.edu', 'level': 'boss'}).status_code == 403
     assert dbq('SELECT count(*) n FROM wsb.app_user')[0]['n'] == before

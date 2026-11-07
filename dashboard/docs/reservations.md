@@ -2,55 +2,76 @@
 
 How someone asks for a vehicle, how it gets approved, and how the emails work.
 
+There are **two websites** on the same database:
+
+- **The vehicle request site** (`reserve_app.py`, http://localhost:5001): for anyone with the link. No account
+  needed. Shows only vehicle names, types and locations.
+- **The fleet site** (`app.py`, http://localhost:5000): the approvers' **Reservations** inbox, behind sign-in.
+
 ## The flow
 
 ```
- Requester                         Site                                Approver
- ─────────                         ────                                ────────
- Fills in "Request a vehicle"  ──► Saves it as Pending
-                                   Email to requester: "We got it"
-                                   Email to every approver: "New request" ──► Sees it in Reservations
-                                                                             (number badge in the top bar)
-                                                                         ──► Approve (picks a vehicle)
-                                                                             Deny (must give a reason)
-                                                                             Ask for information (must say what)
- Gets an email with the answer ◄── Status changes, history line added,
- and all the details they sent     Activity log line written
- 
- If "Needs info": opens the link
- in the email, updates the form ──► Back to Pending, approvers emailed again
+ Requester (request site)              Database                       Approver (fleet site)
+ ────────────────────────              ────────                       ─────────────────────
+ 1. Picks pick-up and return times
+    and sees which vehicles are free
+ 2. Picks one ("Request this one")
+    or "Any boat is fine"
+ 3. Fills in their details         ──► Saved as Pending
+                                       Email to requester: "We got it"
+                                       (with their private link)
+                                       Email to every approver ──────► Sees it in Reservations
+                                                                       (number badge in the top bar)
+                                                                       The vehicle they picked is
+                                                                       pre-selected; can give another
+                                                                   ──► Approve / Deny (reason) /
+                                                                       Ask for information (what)
+ Gets an email with the answer  ◄────  Status, history line,
+ and everything they sent              Activity log line
+ If "Needs info": opens the private
+ link, updates the form            ──► Back to Pending, approvers emailed again
 ```
 
 **Who can do what**
 
 | | Who |
 |---|---|
-| Request a vehicle | Anyone signed in (all three tiers) |
-| See their own requests | The person who sent them (Reservations → My requests) |
-| See all requests, approve, deny, ask for info | Tier 1, and anyone a top admin gives the "Approve reservations" switch (Admin → People) |
-| Update or cancel a request | Only the person who sent it, while it's Pending or Needs info. An approved request can still be cancelled until its return time; approvers get an email so they know the vehicle is free. |
+| Request a vehicle | Anyone with the request site's link. Fleet site users get a "Request a vehicle" link in the top bar. |
+| See, update or cancel their request | The requester, through the private link in their emails (`/r/<secret>`). Update while Pending or Needs info; cancel until the return time. If an approved request is cancelled, approvers get an email. |
+| See all requests, approve, deny, ask for info | Tier 1, and anyone a top admin gives the "Approve reservations" switch (Admin -> People) |
 
-**What the form asks:** name, email, UIN, phone, pick-up and return date and time, destination,
-purpose, vehicle type (or any), passengers, other drivers (one per line: `name, email`), and notes.
+**What the form asks:** name, email, UIN, phone, pick-up and return date and time, the vehicle (from the ones free
+then, or any), vehicle type, destination, purpose, passengers, other drivers (one per line: `name, email`), and notes.
 
-**Double booking:** when approving, the approver picks the vehicle. The requested type is listed first. A vehicle
-already approved for an overlapping time is greyed out, and the site refuses it if someone tries anyway. Retired
-and Out of Service vehicles are not offered.
+**Which vehicles are "free":** active, not Retired, Out of Service or In Maintenance, and not already approved for any
+part of that time. Pending requests don't block a vehicle; the approver decides.
+
+**Double booking:** the approver's list greys out vehicles already approved for an overlapping time, and the site
+refuses them if someone tries anyway.
+
+**Spam protection:** a hidden field robots fill in, at most 10 new requests an hour from one address, and at most
+5 a day for one email address. The private links are long random secrets; pages behind them are not indexed by search
+engines and the link is never sent to other sites.
 
 **Records kept:** every request keeps a history (who did what, when, and the message they wrote) and a copy of
-every email. Decisions also go in Admin → Activity under "Reservations".
+every email. Decisions also go in Admin -> Activity under "Reservations".
 
 ## Pages
 
-| Page | Address |
-|---|---|
-| Request form | `/reserve` |
-| My requests | `/reservations/mine` |
-| Inbox (approvers) | `/reservations` (tabs: Pending, Needs info, Approved, Denied, Cancelled, All) |
-| One request | `/reservations/<number>` |
+| Site | Page | Address |
+|---|---|---|
+| Request site | Choose times, see free vehicles | `/` |
+| Request site | Your details | `/request` |
+| Request site | The requester's own page (private link) | `/r/<secret>`, `/r/<secret>/edit` |
+| Fleet site | Inbox (approvers) | `/reservations` (tabs: Pending, Needs info, Approved, Denied, Cancelled, All) |
+| Fleet site | One request | `/reservations/<number>` |
 
-Code: `dashboard/reservations.py`, `dashboard/mailer.py`, templates `reservations.html`, `reservation.html`.
-Tables: `sql_postgres/13_reservations.sql`.
+Code: `reserve_app.py` + `reserve_templates/`, `reservations.py`, `reservation_core.py` (shared), `mailer.py`.
+Tables: `sql_postgres/13_reservations.sql`, `15_public_reservations.sql`.
+
+**Putting it online:** the request site runs on its own address (for example `reserve.<your-domain>`). Set
+`RESERVE_URL` and `FLEET_URL` in `.env` to the two real addresses so the links in emails point to the right place, and
+give the request site its own `RESERVE_SECRET_KEY`.
 
 ## Emails
 
@@ -110,8 +131,6 @@ writing to the outbox, and whatever sends the emails just needs to read `sent_at
   overdue.
 - **Link to check-in/checkout:** when an approved reservation's vehicle is picked up, start the trip from the
   reservation (driver, destination and purpose already filled in), so Tier 2 only adds mileage and fuel.
-- **Requests without an account:** a public form for students who don't have a fleet account. This needs spam
-  protection and FGCU sign-in first; today the form needs sign-in.
 - **Calendar:** a week view of approved reservations per vehicle.
 - **Reply by email:** let the requester answer a "Needs info" email directly (needs an inbox the site can read; the
   update link does the same job today).
@@ -119,7 +138,7 @@ writing to the outbox, and whatever sends the emails just needs to read `sent_at
 ## Questions for the sponsor
 
 1. Who should get the "new request" email: both top admins, or one shared mailbox?
-2. Should students without a fleet account be able to request (a public form), or only people with an account?
+2. The request site is open to anyone with the link. Is that OK, or should it be limited (for example, only @fgcu.edu emails)?
 3. How far ahead must a request be sent (for example, at least 2 days before pick-up)?
 4. Should approved requests need a valid driver's license on file for every driver before approval?
 5. Which email address should the emails come from?

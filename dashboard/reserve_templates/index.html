@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Request a vehicle{% endblock %}
+{% block body %}
+<div class="res-page">
+  <h1>Request a vehicle</h1>
+  <p class="muted">Choose when you need it to see which vehicles are free. Then fill in your details. The fleet managers
+    approve or deny it, or ask for more information, and you get the answer by email.</p>
+
+  <form method="get" action="{{ url_for('index') }}" class="card form-grid when-form">
+    <label><span>Pick up</span><input type="datetime-local" name="pickup_at" value="{{ pickup }}" required></label>
+    <label><span>Return</span><input type="datetime-local" name="return_at" value="{{ ret }}" required></label>
+    <label><span>Type</span>
+      <select name="type"><option value="">Any type</option>
+        {% for t in types %}<option value="{{ t }}" {{ 'selected' if t == vtype }}>{{ t }}</option>{% endfor %}
+      </select></label>
+    <div class="actions"><button class="btn btn-primary">Show free vehicles</button></div>
+  </form>
+
+  {% if problem %}<div class="flash flash-error" role="alert">{{ problem }}</div>{% endif %}
+
+  {% if free is not none %}
+  <div class="res-head">
+    <h2>Free from {{ pick_dt|when }} to {{ ret_dt|when }}</h2>
+    <a class="btn" href="{{ url_for('request_form', pickup_at=pickup, return_at=ret, type=vtype) }}">Any {{ vtype|lower if vtype else 'vehicle' }} is fine →</a>
+  </div>
+  {% if free %}
+  <div class="pick-grid">
+    {% for v in free %}
+    <div class="card pick">
+      <div class="pick-icon">{{ icon(type_icons.get(v.vehicle_type, 'car'), 28) }}</div>
+      <div class="pick-text"><b>{{ v.label }}</b>
+        <span class="muted small">{{ v.vehicle_type }}{% if v.location %} · {{ v.location }}{% endif %}</span></div>
+      <a class="btn btn-primary" href="{{ url_for('request_form', pickup_at=pickup, return_at=ret, vehicle=v.vehicle_id, type=v.vehicle_type) }}">Request this one</a>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card muted">No {{ vtype|lower ~ 's' if vtype else 'vehicles' }} are free for that whole time. Try other times or another type,
+    or send the request anyway and the fleet managers will see what they can do.</div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

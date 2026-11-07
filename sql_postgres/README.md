@@ -24,6 +24,8 @@ Supabase (PostgreSQL 17) or a local PostgreSQL.
 | `11_vehicle_name.sql` | A Name field for each vehicle (copied once from the start of its notes) | Run | Run |
 | `12_tiers.sql` | Three tiers plus per-person switches; the old Admin level becomes Tier 1 | Run | Run |
 | `13_reservations.sql` | Vehicle requests, their history, and the email outbox | Run | Run |
+| `14_passwords.sql` | Username + password sign-in (hashed passwords, lockout). Then run `python set_password.py <you>` | Run | Run |
+| `15_public_reservations.sql` | The separate request site: private links, the vehicle the requester picked | Run | Run |
 
 On Supabase, open **SQL Editor → New query**, paste one file, and click **Run**.
 Files 01–05 can be run again at any time; they keep existing data.

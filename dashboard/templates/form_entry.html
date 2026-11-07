@@ -33,6 +33,7 @@
       </label>
       {% endif %}
     {% endfor %}
+    {% if honeypot %}<label class="hp" aria-hidden="true">Leave this empty<input name="website" tabindex="-1" autocomplete="off"></label>{% endif %}
     <div class="wide actions">
       <button class="btn btn-primary">{{ submit_label or 'Save' }}</button>
       <a class="btn ghost" href="{{ cancel }}">Cancel</a>

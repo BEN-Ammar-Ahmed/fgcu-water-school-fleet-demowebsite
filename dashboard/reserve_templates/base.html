@@ -1,0 +1,23 @@
+{% from '_icons.html' import icon %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Request a vehicle{% endblock %} · FGCU Water School</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <meta name="theme-color" content="#111111">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="reserve-site">
+<header class="topbar">
+  <a class="brand" href="{{ url_for('index') }}"><img class="logo" src="{{ url_for('static', filename='logo.svg') }}" alt="" width="28" height="28">
+    <span class="brand-text"><small>FGCU Water School</small>Vehicle requests</span></a>
+</header>
+<main class="page">
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+    <div class="flash flash-{{ cat }}" role="status">{{ msg }}</div>
+  {% endfor %}
+  {% block body %}{% endblock %}
+</main>
+</body>
+</html>

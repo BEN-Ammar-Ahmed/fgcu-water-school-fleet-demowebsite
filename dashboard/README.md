@@ -5,45 +5,57 @@ Search-first, black and white, with the client's access tiers. For how to *use* 
 
 ## Run it
 
+There are two websites. Both use the same database.
+
 ```
 cd dashboard
-python app.py
+python app.py            # the fleet site:            http://localhost:5000
+python reserve_app.py    # the vehicle request site:  http://localhost:5001  (run in a second terminal)
 ```
 
-Open http://localhost:5000. The database connection comes from `DATABASE_URL`:
+The database connection comes from `DATABASE_URL`:
 
 - **Supabase (real data):** put the Session pooler URI in `dashboard/.env` as `DATABASE_URL=...` (copy `.env.example`).
   Percent-encode special characters in the password, or use a letters-and-numbers password.
 - **Local PostgreSQL:** without `.env` it uses `dbname=water_school_fleet user=postgres host=localhost`.
 
-Set `SECRET_KEY` in `.env` too. Without it a random key is made at every start, which signs everyone out on restart.
+Also in `.env` (never in git):
+
+| Setting | What for |
+|---|---|
+| `SECRET_KEY` | Fleet site sign-in cookie. Without it, everyone is signed out at every restart. |
+| `RESERVE_SECRET_KEY` | Same, for the request site. Use a different value. |
+| `FLEET_URL`, `RESERVE_URL` | The two sites' addresses, used in links and emails (default `http://localhost:5000` and `:5001`). |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Real email sending (see `docs/reservations.md`). Without them emails wait in the outbox. |
 
 ## Database setup
 
-Run the files in `../sql_postgres/` in order (see the README there): `01`–`05`, then `07_web_access.sql`
-(the "license access" switch), `08_admin_levels.sql` (the four access levels, activity log and who's online) and `09_demo_users.sql`
-(fictional demo users, to remove once the real list arrives).
-On Supabase: SQL Editor → paste a file → Run. Never run `03b_demo_data.sql` on the real project.
+Run the files in `../sql_postgres/` in order (see the README there). On Supabase: SQL Editor -> paste a file -> Run.
+Never run `03b_demo_data.sql` on the real project.
+
+## Sign-in
+
+Username (or email) and password. Passwords are stored only as hashes in `wsb.app_user_password`
+(`14_passwords.sql`); after 5 wrong passwords in a row an account is locked for 15 minutes.
+
+- **First top admin:** after running `14_passwords.sql`, nobody has a password. Set one from a terminal:
+  `python set_password.py <username or email>` (typed hidden).
+- **Everyone else:** a top admin adds them in Admin -> People with a temporary password, or uses "Set a temporary
+  password" on their row. They must choose their own the first time they sign in.
+- **Changing your own password:** click your name in the top bar.
+
+Code: `passwords.py` (checks, lockout, hashing), the `login` and `change_password` routes in `app.py`.
 
 ## Access tiers
 
-All rules live in `tiers.py`:
+All rules live in `tiers.py`: Tier 1 top admin, Tier 2 editor, Tier 3 viewer, plus per-person switches
+(Admin -> People -> Extra abilities). The table is on the Help page.
 
-- **Tier 1** = `wsb.app_role.role_name = 'Admin'`: view, add, edit, delete.
-- **Tier 2** = any other role: view only.
-- **License access** = `wsb.app_user.can_see_licenses`: driver's license records (the client's "Tier 3").
+## Vehicle request site
 
-People are rows in `wsb.app_user`. To give someone access, add a row with their FGCU email, a role and the license switch.
-
-## Sign-in (placeholder)
-
-`/login` shows "Sign in with FGCU". Until FGCU IT connects real single sign-on, `/login/fgcu` forwards to a
-demo sign-in (`/login/account`). It only lists and accepts the fictional `@example.edu` users,
-so real people in `wsb.app_user` can't be signed in as through it.
-
-**Where real sign-in plugs in:** replace `login_fgcu()` in `app.py` with the FGCU / Microsoft Entra ID flow, and
-when it returns the person's email, call `sign_in_email(email)`. That function is the only place a session is created.
-Unknown or inactive emails get the "You don't have access yet" page. Then remove the demo sign-in routes.
+`reserve_app.py` with its own pages in `reserve_templates/` (it also reuses `templates/form_entry.html`).
+Anyone with the link picks free vehicles and sends a request; it lands in the fleet site's Reservations inbox
+(`reservations.py`). Shared logic is in `reservation_core.py`. Full description: `docs/reservations.md`.
 
 ## Code map
 
@@ -55,6 +67,13 @@ Unknown or inactive emails get the "You don't have access yet" page. Then remove
 | `forms.py` | Field definitions and form checking for the add / edit forms |
 | `templates/` | Pages (`base.html` = top bar, `home.html` = search, `_icons.html` = SVG icons) |
 | `static/style.css`, `static/search.js` | Look, and the expanding search bar |
+| `admin.py` | Admin area: overview, people (tiers, switches, temporary passwords), activity, data |
+| `passwords.py`, `set_password.py` | Password checks, lockout and hashing; setting a password from a terminal |
+| `reservations.py` | Reservations inbox on the fleet site (approve, deny, ask for info) |
+| `reserve_app.py`, `reserve_templates/` | The separate vehicle request site |
+| `reservation_core.py`, `mailer.py` | Shared reservation logic; email outbox and sending |
+| `import_views.py`, `importer.py` | Import a spreadsheet |
+| `common.py` | Settings and small helpers both sites use |
 
 Trips, fuel and services are saved through the database functions in `sql_postgres/05_procedures.sql`,
 so the database's own checks apply.

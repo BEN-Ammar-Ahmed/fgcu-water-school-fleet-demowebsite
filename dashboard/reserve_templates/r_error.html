@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}{{ code }}{% endblock %}
+{% block body %}
+<div class="login">
+  <h1>{{ {400: 'Something went wrong', 404: 'Not found', 413: 'Too much text', 429: 'Slow down', 503: 'Not available right now'}.get(code, 'Something went wrong') }}</h1>
+  <p class="muted">{{ msg }}</p>
+  <p><a class="btn" href="{{ url_for('index') }}">Back to the request page</a></p>
+</div>
+{% endblock %}

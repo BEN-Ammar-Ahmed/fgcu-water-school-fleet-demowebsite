@@ -41,6 +41,6 @@ def test_post_with_token_works(client, sign_in, dbq, csrf_on):
 
 
 def test_sign_in_page_works_with_token(client, csrf_on):
-    token = _token(client.get('/login/account').get_data(as_text=True))
-    r = client.post('/login/account', data={'email': 'campus.staff@example.edu', 'csrf_token': token})
+    token = _token(client.get('/login').get_data(as_text=True))
+    r = client.post('/login', data={'password': 'test-password-1', 'username': 'campus.staff@example.edu', 'csrf_token': token})
     assert r.status_code == 302

@@ -6,12 +6,12 @@ from search import parse_date_term
 
 @pytest.mark.parametrize('bad', ['/\\evil.com', '//evil.com', 'https://evil.com', '/\t/evil.com', 'evil.com'])
 def test_login_next_cannot_leave_the_site(client, bad):
-    r = client.post('/login/account', data={'email': 'campus.staff@example.edu', 'next': bad})
+    r = client.post('/login', data={'password': 'test-password-1', 'username': 'campus.staff@example.edu', 'next': bad})
     assert r.status_code == 302 and r.headers['Location'] == '/'
 
 
 def test_login_next_keeps_local_paths(client):
-    r = client.post('/login/account', data={'email': 'campus.staff@example.edu', 'next': '/search?q=F-250'})
+    r = client.post('/login', data={'password': 'test-password-1', 'username': 'campus.staff@example.edu', 'next': '/search?q=F-250'})
     assert r.headers['Location'] == '/search?q=F-250'
 
 
@@ -73,12 +73,12 @@ def test_far_future_dates_do_not_crash(client, sign_in):
     assert client.get('/search?q=x&kind=trips&date_to=9999-12-31').status_code == 200
 
 
-def test_demo_signin_only_for_demo_users(client, dbq):
+def test_account_without_password_cannot_sign_in(client, dbq):
     dbq("""INSERT INTO wsb.app_user (username, full_name, email, role_id, can_see_licenses)
            SELECT 'real_manager', 'Real Manager', 'real.manager@fgcu.edu', role_id, TRUE
-           FROM wsb.app_role WHERE role_name = 'Admin'""")
-    assert 'real.manager@fgcu.edu' not in client.get('/login/account').get_data(as_text=True)
-    assert client.post('/login/account', data={'email': 'real.manager@fgcu.edu'}).status_code == 403
+           FROM wsb.app_role WHERE role_name = 'Top admin'""")
+    assert 'real.manager@fgcu.edu' not in client.get('/login').get_data(as_text=True)
+    assert client.post('/login', data={'password': 'test-password-1', 'username': 'real.manager@fgcu.edu'}).status_code == 401
 
 
 def test_help_says_tier1_sees_driver_emails(client, sign_in):

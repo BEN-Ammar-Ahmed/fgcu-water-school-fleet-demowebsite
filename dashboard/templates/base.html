@@ -31,10 +31,11 @@
       </div>
     </details>
     {% endif %}
-    <a class="navlink" title="Reservations" href="{{ url_for('res.inbox') if user.can('approve') else url_for('res.mine') }}">{{ icon('calendar', 18) }}<span class="navtext"> Reservations</span>{% if reservations_waiting %} <span class="badge badge-soon" title="Requests waiting for a decision">{{ reservations_waiting }}</span>{% endif %}</a>
+    {% if user.can('approve') %}<a class="navlink" title="Reservations" href="{{ url_for('res.inbox') }}">{{ icon('calendar', 18) }}<span class="navtext"> Reservations</span>{% if reservations_waiting %} <span class="badge badge-soon" title="Requests waiting for a decision">{{ reservations_waiting }}</span>{% endif %}</a>
+    {% else %}<a class="navlink" title="Request a vehicle (opens the request site)" href="{{ reserve_site }}" target="_blank" rel="noopener">{{ icon('calendar', 18) }}<span class="navtext"> Request a vehicle</span></a>{% endif %}
     {% if user.is_admin %}<a class="navlink" title="Admin" href="/admin">{{ icon('admin', 18) }}<span class="navtext"> Admin</span></a>{% endif %}
     <a class="navlink" title="Help" href="{{ url_for('help_page') }}">{{ icon('help', 18) }}<span class="navtext"> Help</span></a>
-    <span class="who"><span class="who-name">{{ user.full_name }}</span> <span class="badge">{{ user.tier_label }}</span></span>
+    <a class="who" href="{{ url_for('change_password') }}" title="Change password"><span class="who-name">{{ user.full_name }}</span> <span class="badge">{{ user.tier_label }}</span></a>
     <a class="navlink" href="{{ url_for('logout') }}" title="Sign out">{{ icon('logout', 18) }}<span class="sr">Sign out</span></a>
   </nav>
 </header>

@@ -14,31 +14,20 @@ from flask import (Flask, render_template, request, redirect, url_for, session,
 from werkzeug.utils import secure_filename
 
 from changes import diff as change_diff
+from common import VEHICLE_TYPES, database_url, display_name, load_env_file, reserve_url
 from forms import Field, parse
 from search import KINDS, run_search
-from tiers import LEVEL_LABELS, doc_levels, level_for_role, load_user, user_for_email
+import passwords
+from tiers import doc_levels, load_user
 
 HERE = Path(__file__).parent
 UPLOADS = HERE / 'uploads'
 
 
-def load_env_file(path):
-    """Read KEY=value lines from dashboard/.env (kept out of git) into the environment."""
-    if not path.exists():
-        return
-    for line in path.read_text(encoding='utf-8').splitlines():
-        line = line.strip()
-        if line and not line.startswith('#') and '=' in line:
-            k, v = line.split('=', 1)
-            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
-
-
 load_env_file(HERE / '.env')
 # Supabase: put the "Session pooler" connection string in dashboard/.env as DATABASE_URL=...
 # Without it, the app falls back to your local PostgreSQL.
-DB_URL = os.environ.get('DATABASE_URL', 'dbname=water_school_fleet user=postgres host=localhost')
-if 'supabase' in DB_URL and 'sslmode' not in DB_URL:
-    DB_URL += ('&' if '?' in DB_URL else '?') + 'sslmode=require'
+DB_URL = database_url()
 DB_WHERE = 'Supabase' if 'supabase' in DB_URL else 'local PostgreSQL'
 
 app = Flask(__name__)
@@ -46,9 +35,8 @@ app.secret_key = os.environ.get('SECRET_KEY', uuid.uuid4().hex)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB per upload
 
 # ---------------------------------------------------------------------------
-# Access tiers (see tiers.py). Real FGCU sign-in will call sign_in_email().
+# Access tiers (see tiers.py). Sign-in: username + password (passwords.py).
 # ---------------------------------------------------------------------------
-VEHICLE_TYPES = ['Boat', 'Car', 'Truck', 'Trailer', 'Golf Cart', 'ATV', 'Other']
 STATUSES = ['Available', 'In Use', 'In Maintenance', 'Out of Service', 'Retired']
 DOC_TYPES = ['Registration', 'Insurance - Auto Liability', 'Insurance - General Liability',
              'Insurance - Workers Comp', 'Title', 'Inspection', 'Manual', 'Other']
@@ -90,16 +78,13 @@ def safe_next(target):
     return target if not parts.scheme and not parts.netloc else None
 
 
-DEMO_DOMAIN = '@example.edu'   # the demo sign-in only works for the fictional users from 09_demo_users.sql
-
-
-def sign_in_email(email):
-    """The one place a sign-in turns into a session. Real FGCU sign-in calls this later."""
-    u = user_for_email(q, email)
+def start_session(user_id, must_change=False):
+    """The one place a sign-in turns into a session (a fresh one, so an old session id can't be reused)."""
     session.clear()
-    if u:
-        session['user_id'] = u.user_id
-    return u
+    g.pop('user', None)       # forget the 'signed out' answer cached earlier in this request
+    session['user_id'] = user_id
+    if must_change:
+        session['must_change'] = True
 
 
 def _user_or_none():
@@ -192,13 +177,6 @@ def ensure_setup():
         cur.execute((HERE / 'setup.sql').read_text(encoding='utf-8'))
 
 
-def display_name(v):
-    """The vehicle's Name (edited on its Edit page), else year make model, e.g. '2013 Ford F150 4x4'."""
-    if (v.get('name') or '').strip():
-        return v['name'].strip()
-    return ' '.join(str(x) for x in (v.get('year'), v.get('make'), v.get('model')) if x) or f"Vehicle #{v['vehicle_id']}"
-
-
 app.jinja_env.globals['display_name'] = display_name
 
 
@@ -224,6 +202,14 @@ def check_csrf():
     if not session.get('_csrf') or not secrets.compare_digest(sent, session['_csrf']):
         return error_page(400, 'This page was open too long or came from somewhere else. '
                                'Go back, refresh the page, and try again.')
+    return None
+
+
+@app.before_request
+def temporary_password_first():
+    """Someone signed in with a temporary password must choose their own before doing anything else."""
+    if session.get('must_change') and request.endpoint not in ('change_password', 'logout', 'static'):
+        return redirect(url_for('change_password'))
     return None
 app.jinja_env.globals['change_text'] = __import__('changes').text
 
@@ -266,35 +252,45 @@ def maintenance(extra='', args=()):
 
 
 # ---------------------------------------------------------------------------
-# Sign-in (FGCU placeholder + account picker for the test accounts)
+# Sign-in: username (or email) + password. See passwords.py and set_password.py.
 # ---------------------------------------------------------------------------
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    return render_template('login.html', next=request.args.get('next', ''))
-
-
-@app.route('/login/fgcu')
-def login_fgcu():
-    # Placeholder: FGCU sign-in (likely Microsoft Entra ID) gets connected here later.
-    return redirect(url_for('login_account', next=request.args.get('next', '')))
-
-
-@app.route('/login/account', methods=['GET', 'POST'])
-def login_account():
     nxt = request.values.get('next') or ''
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        u = sign_in_email(email) if email.lower().endswith(DEMO_DOMAIN) else None
-        if not u:
-            return render_template('no_access.html'), 403
-        log_activity('sign-in', 'Signed in', user=u)
+    if current_user() and request.method == 'GET':
         return redirect(safe_next(nxt) or url_for('dashboard'))
-    people = q("""SELECT u.full_name, u.email, r.role_name FROM wsb.app_user u
-                  JOIN wsb.app_role r USING (role_id) WHERE u.active AND lower(u.email) LIKE %s
-                  ORDER BY r.role_name, u.full_name""", ('%' + DEMO_DOMAIN,))
-    for p in people:
-        p['level_label'] = LEVEL_LABELS[level_for_role(p['role_name'])]
-    return render_template('account_signin.html', people=people, next=nxt)
+    error, username = None, (request.form.get('username') or '').strip()[:150]
+    if request.method == 'POST':
+        row, error = passwords.check(q, run, username, request.form.get('password', ''))
+        if row:
+            start_session(row['user_id'], row['must_change'])
+            log_activity('sign-in', 'Signed in', user=current_user())
+            if row['must_change']:
+                flash('You signed in with a temporary password. Choose your own to continue.', 'ok')
+                return redirect(url_for('change_password'))
+            return redirect(safe_next(nxt) or url_for('dashboard'))
+        log_activity('sign-in', f'Failed sign-in for "{username}"', user=None)
+    return render_template('login.html', next=nxt, error=error, username=username), (401 if error else 200)
+
+
+@app.route('/account/password', methods=['GET', 'POST'])
+@require()
+def change_password():
+    u = current_user()
+    forced = bool(session.get('must_change'))
+    errors = []
+    if request.method == 'POST':
+        row, _ = passwords.check(q, run, u.username, request.form.get('current', ''))
+        if not row or row['user_id'] != u.user_id:
+            errors.append('Your current password is not right.')
+        errors += passwords.problems(request.form.get('new', ''), request.form.get('confirm', ''), u.username)
+        if not errors:
+            passwords.set_password(run, u.user_id, request.form['new'], must_change=False)
+            session.pop('must_change', None)
+            log_activity('access', 'Changed their own password')
+            flash('Password changed.', 'ok')
+            return redirect(url_for('dashboard'))
+    return render_template('change_password.html', errors=errors, forced=forced, min_length=passwords.MIN_LENGTH)
 
 
 @app.route('/logout')
