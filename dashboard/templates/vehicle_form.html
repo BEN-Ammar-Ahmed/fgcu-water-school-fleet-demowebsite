@@ -4,6 +4,7 @@
 <a class="muted small" href="{{ url_for('dashboard') if new else url_for('vehicle', vid=v.vehicle_id) }}">← Back</a>
 <h1>{{ 'Add a vehicle' if new else 'Edit ' ~ display_name(v) }}</h1>
 <form method="post" class="card form-grid two">
+  <label class="wide">Name<input name="name" maxlength="80" value="{{ v.name or '' }}" placeholder="e.g. 2013 Ford F150 4x4 or Canoe trailer"><span class="muted tiny">What people call it. Leave empty to show year, make and model.</span></label>
   <label>Type<select name="vehicle_type">{% for t in types %}<option {{ 'selected' if v.vehicle_type == t }}>{{ t }}</option>{% endfor %}</select></label>
   <label>Status<select name="status">{% for s in statuses %}<option {{ 'selected' if v.status == s }}>{{ s }}</option>{% endfor %}</select></label>
   <label>Make<input name="make" maxlength="30" value="{{ v.make or '' }}"></label>

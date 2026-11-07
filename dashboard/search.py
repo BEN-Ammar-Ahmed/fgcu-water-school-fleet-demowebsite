@@ -16,13 +16,13 @@ from tiers import doc_levels
 KINDS = ['all', 'vehicles', 'trips', 'fuel', 'maintenance', 'documents', 'drivers', 'licenses']
 GROUP_LIMIT = 50
 
-_VT = ("concat_ws(' ', v.asset_number, v.year, v.make, v.model, v.notes, v.license_plate, v.vin, "
+_VT = ("concat_ws(' ', v.name, v.asset_number, v.year, v.make, v.model, v.notes, v.license_plate, v.vin, "
        "v.location, v.department, v.vehicle_type)")
-_VCOLS = 'v.asset_number, v.year, v.make, v.model, v.notes, v.vehicle_type'
+_VCOLS = 'v.asset_number, v.year, v.make, v.model, v.notes, v.name, v.vehicle_type'
 
 GROUPS = {
     'vehicles': {
-        'sql': f"""SELECT v.vehicle_id, v.asset_number, v.vehicle_type, v.make, v.model, v.year, v.notes,
+        'sql': f"""SELECT v.vehicle_id, v.asset_number, v.vehicle_type, v.make, v.model, v.year, v.notes, v.name,
                           v.location, v.status, v.active, v.license_plate,
                           {_VT} AS _text, NULL::date AS _date, NULL::date AS _date2, v.vehicle_type AS _vtype
                    FROM wsb.vehicle v""",

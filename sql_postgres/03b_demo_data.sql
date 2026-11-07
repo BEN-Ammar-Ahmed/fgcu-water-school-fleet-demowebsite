@@ -60,7 +60,7 @@ INSERT INTO wsb.vehicle (asset_number, vehicle_type, make, model, year, vin, lic
  ('DEMO-C01','Car',      'Toyota',         'Camry',           2019,'DEMOVIN0000000C01','DMO-C01', 'Research',         '1201',61500,NULL, 'Main Lot','Available',      NULL),
  ('DEMO-C02','Car',      'Ford',           'Escape',          2023,'DEMOVIN0000000C02','DMO-C02', 'Research',         '1202',22090,NULL, 'Main Lot','Available',      NULL),
  ('DEMO-B01','Boat',     'Carolina Skiff', '21 DLV',          2020,'DEMOHIN0000000B01','FL1001DM','Marine Operations',NULL,  NULL, 512.5,'Boatyard','Available',      'Primary research skiff'),
- ('DEMO-B02','Boat',     'Boston Whaler',  '170 Montauk',     2018,'DEMOHIN0000000B02','FL1002DM','Marine Operations',NULL,  NULL, 880.0,'Boatyard','In Maintenance', 'Console repair pending'),
+ ('DEMO-B02','Boat',     'Boston Whaler',  '170 Montauk',     2018,'DEMOHIN0000000B02','FL1002DM','Marine Operations',NULL,  NULL, 880.0,'Boatyard','In Maintenance', 'Boston Whaler 170 Montauk; console repair pending'),
  ('DEMO-TR1','Trailer',  'Load Rite',      'Aluminum Tandem', 2020,'DEMOVIN0000000TR1','DMO-R01', 'Marine Operations',NULL,  NULL, NULL, 'Boatyard','Available',      'Fits DEMO-B01'),
  ('DEMO-G01','Golf Cart','Club Car',       'Carryall 300',    2018,'DEMOVIN0000000G01',NULL,      'Outreach',         NULL,  NULL, NULL, 'Campus',  'Out of Service', 'Needs new batteries');
 

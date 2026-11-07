@@ -20,6 +20,7 @@ Supabase (PostgreSQL 17) or a local PostgreSQL.
 | `07_web_access.sql` | Web site tiers: adds the "can see driver's licenses" switch | Run | Run |
 | `08_admin_levels.sql` | Four access levels (Top admin, Admin, Tier 2 can edit / view only), activity log, who's online | Run | Run |
 | `09_demo_users.sql` | Fictional sign-in users, one per level, until the real list arrives (was `07b`) | Run (remove later) | Run |
+| `11_vehicle_name.sql` | A Name field for each vehicle (copied once from the start of its notes) | Run | Run |
 | `10_suggestions.sql` | Typing suggestions (pg_trgm when allowed), edit details and sign-outs in the activity log | Run | Run |
 
 On Supabase, open **SQL Editor → New query**, paste one file, and click **Run**.

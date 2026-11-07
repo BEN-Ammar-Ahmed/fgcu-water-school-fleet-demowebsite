@@ -25,11 +25,11 @@ def trgm_schema(q) -> str:
     return TRGM_SCHEMA
 
 
-_VEHICLE = """SELECT concat_ws(' · ', NULLIF(split_part(coalesce(v.notes, ''), ';', 1), ''),
-                               CASE WHEN coalesce(v.notes, '') = '' THEN concat_ws(' ', v.year, v.make, v.model) END,
+_VEHICLE = """SELECT concat_ws(' · ', coalesce(nullif(trim(v.name), ''), nullif(concat_ws(' ', v.year, v.make, v.model), ''),
+                                                'Vehicle #' || v.vehicle_id),
                                v.asset_number) AS label,
                      v.status AS detail, '/vehicles/' || v.vehicle_id AS url, v.vehicle_id::text AS value,
-                     concat_ws(' ', v.asset_number, v.year, v.make, v.model, v.notes, v.vehicle_type, v.location) AS _t,
+                     concat_ws(' ', v.name, v.asset_number, v.year, v.make, v.model, v.notes, v.vehicle_type, v.location) AS _t,
                      CASE WHEN v.active THEN 1 ELSE 0 END AS _n
               FROM wsb.vehicle v {where}"""
 
@@ -55,14 +55,14 @@ def _sources(user, field):
             out.append(('Drivers', """SELECT first_name || ' ' || last_name AS label, coalesce(department, '') AS detail,
                                              '/search?kind=drivers&q=' || replace(replace(replace(last_name, '%%', '%%25'), '&', '%%26'), ' ', '%%20') AS url, driver_id::text AS value,
                                              first_name || ' ' || last_name AS _t, 1 AS _n FROM wsb.driver"""))
-        out.append(('Maintenance', """SELECT r.maintenance_type || ' · ' || concat_ws(' ', v.year, v.make, v.model) AS label,
+        out.append(('Maintenance', """SELECT r.maintenance_type || ' · ' || coalesce(nullif(trim(v.name), ''), concat_ws(' ', v.year, v.make, v.model)) AS label,
                                              '' AS detail, '/vehicles/' || v.vehicle_id || '#maintenance' AS url,
                                              r.rule_id::text AS value,
-                                             concat_ws(' ', r.maintenance_type, v.asset_number, v.make, v.model, v.notes) AS _t,
+                                             concat_ws(' ', r.maintenance_type, v.name, v.asset_number, v.make, v.model, v.notes) AS _t,
                                              1 AS _n
                                       FROM wsb.maintenance_rule r JOIN wsb.vehicle v USING (vehicle_id)
                                       WHERE r.enabled AND v.active"""))
-        out.append(('Documents', """SELECT d.document_type || ' · ' || concat_ws(' ', v.year, v.make, v.model) AS label,
+        out.append(('Documents', """SELECT d.document_type || ' · ' || coalesce(nullif(trim(v.name), ''), concat_ws(' ', v.year, v.make, v.model)) AS label,
                                            coalesce(to_char(d.expiration_date, 'Mon DD, YYYY'), '') AS detail,
                                            '/vehicles/' || v.vehicle_id || '#documents' AS url, d.document_id::text AS value,
                                            concat_ws(' ', d.document_type, v.asset_number, v.make, v.model) AS _t, 1 AS _n

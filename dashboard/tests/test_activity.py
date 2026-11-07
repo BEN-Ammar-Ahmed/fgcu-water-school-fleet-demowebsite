@@ -83,7 +83,7 @@ def test_last_seen_and_page_are_recorded(client, sign_in, dbq):
 # --- Before → after detail and sign-outs (2026-11-06) ---------------------------------
 def _edit_vehicle(client, dbq, vid, **changes):
     v = dbq('SELECT * FROM wsb.vehicle WHERE vehicle_id = %s', (vid,))[0]
-    form = {k: ('' if v[k] is None else str(v[k])) for k in ('asset_number', 'vehicle_type', 'make', 'model', 'year', 'vin',
+    form = {k: ('' if v[k] is None else str(v[k])) for k in ('name', 'asset_number', 'vehicle_type', 'make', 'model', 'year', 'vin',
             'license_plate', 'department', 'current_mileage', 'current_hours', 'location', 'status', 'notes')}
     form.update(changes)
     return client.post(f'/vehicles/{vid}/edit', data=form)

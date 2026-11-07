@@ -34,3 +34,20 @@ def test_vehicle_without_records_renders(client, sign_in, dbq):
     sign_in(client, 'demo_tier2')
     r = client.get(f'/vehicles/{vid}')
     assert r.status_code == 200 and 'No trips yet' in r.get_data(as_text=True)
+
+
+def test_vehicle_name_is_its_own_field(client, sign_in, dbq):
+    """Names come from the Name field, not from notes (11_vehicle_name.sql)."""
+    vid = dbq("SELECT vehicle_id FROM wsb.vehicle WHERE asset_number = 'DEMO-B02'")[0]['vehicle_id']
+    assert dbq('SELECT name FROM wsb.vehicle WHERE vehicle_id = %s', (vid,))[0]['name'] == 'Boston Whaler 170 Montauk'
+    dbq("UPDATE wsb.vehicle SET notes = 'Needs new bilge pump' WHERE vehicle_id = %s", (vid,))
+    sign_in(client, 'demo_tier2')
+    html = client.get(f'/vehicles/{vid}').get_data(as_text=True)
+    assert 'Boston Whaler 170 Montauk' in html and '<title>Needs new bilge pump' not in html
+    dbq("UPDATE wsb.vehicle SET name = NULL WHERE vehicle_id = %s", (vid,))
+    assert '2018 Boston Whaler 170 Montauk' in client.get(f'/vehicles/{vid}').get_data(as_text=True)
+
+
+def test_edit_page_has_name_field(client, sign_in):
+    sign_in(client, 'demo_tier1')
+    assert 'name="name"' in client.get('/vehicles/1/edit').get_data(as_text=True)

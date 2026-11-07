@@ -192,10 +192,9 @@ def ensure_setup():
 
 
 def display_name(v):
-    """The original spreadsheet description reads best, e.g. '2013 Ford F150 4x4'."""
-    desc = (v.get('notes') or '').split(';')[0].strip()
-    if desc:
-        return desc
+    """The vehicle's Name (edited on its Edit page), else year make model, e.g. '2013 Ford F150 4x4'."""
+    if (v.get('name') or '').strip():
+        return v['name'].strip()
     return ' '.join(str(x) for x in (v.get('year'), v.get('make'), v.get('model')) if x) or f"Vehicle #{v['vehicle_id']}"
 
 
@@ -203,7 +202,7 @@ app.jinja_env.globals['display_name'] = display_name
 app.jinja_env.globals['change_text'] = __import__('changes').text
 
 MAINT_SQL = """
-SELECT r.*, v.vehicle_type, v.make, v.model, v.year, v.notes, v.location, v.current_mileage,
+SELECT r.*, v.vehicle_type, v.make, v.model, v.year, v.notes, v.name, v.location, v.current_mileage,
        (r.last_completed_date + make_interval(months => r.time_interval_months))::date AS due_date
 FROM wsb.maintenance_rule r JOIN wsb.vehicle v USING (vehicle_id)
 WHERE r.enabled AND v.active {extra}
@@ -298,7 +297,7 @@ def dashboard():
     maint = maintenance()
     dash = {'attention': [m for m in maint if m['status'] in ('Overdue', 'Due soon')][:8],
             'out_now': q("""SELECT t.trip_id, t.vehicle_id, t.start_datetime, t.destination,
-                                   v.year, v.make, v.model, v.notes, v.asset_number,
+                                   v.year, v.make, v.model, v.notes, v.name, v.asset_number,
                                    d.first_name || ' ' || d.last_name AS driver_name
                             FROM wsb.trip t JOIN wsb.vehicle v USING (vehicle_id) JOIN wsb.driver d USING (driver_id)
                             WHERE t.end_datetime IS NULL ORDER BY t.start_datetime DESC LIMIT 8""")}
@@ -307,7 +306,7 @@ def dashboard():
                             WHERE user_id = %s AND kind IN ('change', 'access') ORDER BY activity_id DESC LIMIT 6""",
                          (u.user_id,))
     else:
-        dash['available'] = q("""SELECT vehicle_id, vehicle_type, year, make, model, notes, asset_number, location
+        dash['available'] = q("""SELECT vehicle_id, vehicle_type, year, make, model, notes, name, asset_number, location
                                  FROM wsb.vehicle WHERE active AND status = 'Available'
                                  ORDER BY vehicle_type, year DESC NULLS LAST LIMIT 12""")
         dash['available_total'] = q("SELECT count(*) n FROM wsb.vehicle WHERE active AND status = 'Available'",
@@ -371,7 +370,7 @@ def search_page():
     pairs = lambda xs: [(x, x) for x in xs]
     ctx['opts'] = {
         'vehicles': [(v['vehicle_id'], display_name(v)) for v in q(
-            "SELECT vehicle_id, asset_number, year, make, model, notes FROM wsb.vehicle ORDER BY vehicle_type, year DESC NULLS LAST")],
+            "SELECT vehicle_id, asset_number, year, make, model, notes, name FROM wsb.vehicle ORDER BY vehicle_type, year DESC NULLS LAST")],
         'drivers': [(d['driver_id'], d['name']) for d in q(
             "SELECT driver_id, first_name || ' ' || last_name AS name FROM wsb.driver ORDER BY last_name, first_name")],
         'locations': pairs(r['location'] for r in q(
@@ -421,9 +420,9 @@ def vehicle(vid):
                            costs=costs, docs=docs, doc_types=DOC_TYPES, levels=levels)
 
 
-VEHICLE_FIELDS = ['asset_number', 'vehicle_type', 'make', 'model', 'year', 'vin', 'license_plate',
+VEHICLE_FIELDS = ['name', 'asset_number', 'vehicle_type', 'make', 'model', 'year', 'vin', 'license_plate',
                   'department', 'current_mileage', 'current_hours', 'location', 'status', 'notes']
-VEHICLE_LABELS = {'asset_number': 'Property tag', 'vehicle_type': 'Type', 'vin': 'VIN / HIN',
+VEHICLE_LABELS = {'name': 'Name', 'asset_number': 'Property tag', 'vehicle_type': 'Type', 'vin': 'VIN / HIN',
                   'license_plate': 'Plate / registration', 'current_mileage': 'Mileage',
                   'current_hours': 'Engine hours'}
 
@@ -505,7 +504,7 @@ def db_error_message(e):
 
 def _vehicle_choices():
     return [(v['vehicle_id'], display_name(v) + (f" ({v['asset_number']})" if v['asset_number'] else ''))
-            for v in q("""SELECT vehicle_id, asset_number, year, make, model, notes FROM wsb.vehicle
+            for v in q("""SELECT vehicle_id, asset_number, year, make, model, notes, name FROM wsb.vehicle
                           WHERE active ORDER BY vehicle_type, year DESC NULLS LAST""")]
 
 
@@ -790,7 +789,7 @@ def doc_upload(vid):
 @app.route('/documents')
 @require()
 def documents():
-    rows = q("""SELECT d.*, v.notes AS vnotes, v.vehicle_id, v.make, v.model, v.year
+    rows = q("""SELECT d.*, v.notes AS vnotes, v.name AS vname, v.vehicle_id, v.make, v.model, v.year
                 FROM wsb.vehicle_document d JOIN wsb.vehicle v USING (vehicle_id)
                 WHERE d.access_level = ANY(%s) ORDER BY d.document_id DESC""", (doc_levels(current_user()),))
     return render_template('documents.html', rows=rows)

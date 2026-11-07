@@ -11,7 +11,7 @@
   {% for d in rows %}
     <tr>
       <td>{{ d.document_type }}</td>
-      <td><a href="{{ url_for('vehicle', vid=d.vehicle_id) }}">{{ display_name({'notes': d.vnotes, 'vehicle_id': d.vehicle_id, 'make': d.make, 'model': d.model, 'year': d.year}) }}</a></td>
+      <td><a href="{{ url_for('vehicle', vid=d.vehicle_id) }}">{{ display_name({'name': d.vname, 'notes': d.vnotes, 'vehicle_id': d.vehicle_id, 'make': d.make, 'model': d.model, 'year': d.year}) }}</a></td>
       <td><a href="{{ url_for('doc_file', did=d.document_id) }}" target="_blank">{{ d.file_location.split('/')[-1] }}</a></td>
       <td>{{ d.expiration_date.strftime('%b %d, %Y') if d.expiration_date else '—' }}</td>
       <td><span class="badge">{{ d.access_level }}</span></td>
