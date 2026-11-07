@@ -31,7 +31,7 @@
 
 {% block body %}
 {% if not searched %}
-<section class="home-stage" id="home-stage">
+<section class="home-stage{{ ' with-dash' if dash }}" id="home-stage">
   <h1 class="home-title">What are you looking for?</h1>
   <form class="searchbox" id="searchbox" action="{{ url_for('search_page') }}" method="get" role="search">
     <button type="button" class="searchbox-icon" id="search-open" aria-label="Search">{{ icon('search', 22) }}</button>
@@ -44,6 +44,7 @@
     {{ alerts() }}
   </div>
 </section>
+{% include '_home_dash.html' %}
 {% else %}
 <section class="results-stage">
   <form class="searchbox open top" id="searchbox" action="{{ url_for('search_page') }}" method="get" role="search">

@@ -292,8 +292,27 @@ def logout():
 @app.route('/')
 @require()
 def dashboard():
-    """Home page: the search, closed until someone clicks it."""
-    return render_template('home.html', searched=False, **_search_context('', 'all', {}))
+    """Home page: the search, then a short dashboard. Editors get things to act on; viewers get what's available."""
+    u = current_user()
+    ctx = _search_context('', 'all', {})
+    maint = maintenance()
+    dash = {'attention': [m for m in maint if m['status'] in ('Overdue', 'Due soon')][:8],
+            'out_now': q("""SELECT t.trip_id, t.vehicle_id, t.start_datetime, t.destination,
+                                   v.year, v.make, v.model, v.notes, v.asset_number,
+                                   d.first_name || ' ' || d.last_name AS driver_name
+                            FROM wsb.trip t JOIN wsb.vehicle v USING (vehicle_id) JOIN wsb.driver d USING (driver_id)
+                            WHERE t.end_datetime IS NULL ORDER BY t.start_datetime DESC LIMIT 8""")}
+    if u.can_edit:
+        dash['mine'] = q("""SELECT at, summary, details FROM wsb.activity_log
+                            WHERE user_id = %s AND kind IN ('change', 'access') ORDER BY activity_id DESC LIMIT 6""",
+                         (u.user_id,))
+    else:
+        dash['available'] = q("""SELECT vehicle_id, vehicle_type, year, make, model, notes, asset_number, location
+                                 FROM wsb.vehicle WHERE active AND status = 'Available'
+                                 ORDER BY vehicle_type, year DESC NULLS LAST LIMIT 12""")
+        dash['available_total'] = q("SELECT count(*) n FROM wsb.vehicle WHERE active AND status = 'Available'",
+                                    one=True)['n']
+    return render_template('home.html', searched=False, dash=dash, **ctx)
 
 
 KIND_LABELS = {'all': 'All', 'vehicles': 'Vehicles', 'trips': 'Trips', 'fuel': 'Fuel',
