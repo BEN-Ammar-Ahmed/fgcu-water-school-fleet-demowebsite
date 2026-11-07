@@ -514,13 +514,13 @@ def trip_new():
     drivers = [(d['driver_id'], f"{d['first_name']} {d['last_name']}") for d in q(
         """SELECT driver_id, first_name, last_name FROM wsb.driver WHERE approved AND active AND email IS NOT NULL
            ORDER BY last_name, first_name""")]
-    fields = [Field('vehicle_id', 'Vehicle', 'select', True, _vehicle_choices()),
-              Field('driver_id', 'Driver', 'select', True, drivers, help='Only approved, active drivers are listed.'),
+    fields = [Field('vehicle_id', 'Vehicle', 'select', True, _vehicle_choices(), suggest='vehicle'),
+              Field('driver_id', 'Driver', 'select', True, drivers, help='Only approved, active drivers are listed.', suggest='driver'),
               Field('start_datetime', 'Start', 'datetime', True),
               Field('end_datetime', 'End', 'datetime', help='Leave empty for a trip still in progress.'),
               Field('starting_mileage', 'Starting mileage', 'int'), Field('ending_mileage', 'Ending mileage', 'int'),
-              Field('destination', 'Destination'), Field('purpose', 'Purpose'),
-              Field('project_program', 'Project / program'), Field('notes', 'Notes', 'textarea', wide=True)]
+              Field('destination', 'Destination', suggest='destination'), Field('purpose', 'Purpose', suggest='purpose'),
+              Field('project_program', 'Project / program', suggest='project_program'), Field('notes', 'Notes', 'textarea', wide=True)]
     return _entry_form('Log a trip', fields, """SELECT wsb.add_trip(
         p_asset_number => %(asset_number)s,
         p_driver_email => (SELECT email FROM wsb.driver WHERE driver_id = %(driver_id)s), p_start_datetime => %(start_datetime)s,
@@ -532,10 +532,10 @@ def trip_new():
 @app.route('/fuel/new', methods=['GET', 'POST'])
 @require(edit=True)
 def fuel_new():
-    fields = [Field('vehicle_id', 'Vehicle', 'select', True, _vehicle_choices()),
+    fields = [Field('vehicle_id', 'Vehicle', 'select', True, _vehicle_choices(), suggest='vehicle'),
               Field('fuel_date', 'Date', 'date', True), Field('gallons', 'Gallons', 'num', True),
               Field('total_cost', 'Total cost', 'num', True), Field('mileage', 'Mileage', 'int'),
-              Field('vendor', 'Station / vendor')]
+              Field('vendor', 'Station / vendor', suggest='vendor')]
     return _entry_form('Log fuel', fields, """SELECT wsb.add_fuel(
         p_asset_number => %(asset_number)s, p_fuel_date => %(fuel_date)s, p_gallons => %(gallons)s,
         p_total_cost => %(total_cost)s, p_mileage => %(mileage)s, p_vendor => %(vendor)s)""", '#fuel',
@@ -545,11 +545,11 @@ def fuel_new():
 @app.route('/maintenance/new', methods=['GET', 'POST'])
 @require(edit=True)
 def maintenance_new():
-    fields = [Field('vehicle_id', 'Vehicle', 'select', True, _vehicle_choices()),
+    fields = [Field('vehicle_id', 'Vehicle', 'select', True, _vehicle_choices(), suggest='vehicle'),
               Field('service_date', 'Date', 'date', True),
-              Field('service_type', 'Service', required=True,
+              Field('service_type', 'Service', required=True, suggest='service_type',
                     help='Use the same name as the schedule (e.g. Oil Change) to move it forward.'),
-              Field('cost', 'Cost', 'num'), Field('vendor', 'Vendor'), Field('mileage_at_service', 'Mileage', 'int'),
+              Field('cost', 'Cost', 'num'), Field('vendor', 'Vendor', suggest='vendor'), Field('mileage_at_service', 'Mileage', 'int'),
               Field('next_service_date', 'Next service date', 'date'),
               Field('next_service_mileage', 'Next service mileage', 'int'),
               Field('description', 'What was done', 'textarea', wide=True)]
@@ -569,7 +569,7 @@ DRIVER_COLS = ('first_name', 'last_name', 'email', 'department', 'driver_type', 
 
 def _driver_fields():
     fields = [Field('first_name', 'First name', required=True), Field('last_name', 'Last name', required=True),
-              Field('email', 'Email'), Field('department', 'Department'),
+              Field('email', 'Email'), Field('department', 'Department', suggest='department'),
               Field('driver_type', 'Type', 'select', options=[(t, t) for t in DRIVER_TYPES]),
               Field('approved', 'Approved to drive', 'bool'), Field('active', 'Active', 'bool')]
     if current_user().can_see_licenses:

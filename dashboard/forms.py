@@ -13,6 +13,7 @@ class Field:
     options: list = field(default_factory=list)   # [(value, label)] for select
     help: str = ''
     wide: bool = False
+    suggest: str = ''   # /suggest field name: shows matches while typing (static/suggest.js)
 
 
 def _convert(f: Field, raw: str):

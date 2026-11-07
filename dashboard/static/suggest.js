@@ -9,6 +9,22 @@
     return esc(label.slice(0, i)) + '<b>' + esc(label.slice(i, i + text.length)) + '</b>' + esc(label.slice(i + text.length));
   }
 
+  // Long lists (vehicle, driver) become a type-to-find box. The <select> stays in the form (hidden) and
+  // still carries the chosen id, so without JavaScript the plain list works as before.
+  document.querySelectorAll('select[data-suggest-select]').forEach(function (sel) {
+    var box = document.createElement('input');
+    box.type = 'text'; box.className = sel.className;
+    box.dataset.suggest = sel.dataset.suggestSelect; box.dataset.suggestMode = 'pick';
+    box.placeholder = 'Type to find…';
+    box.setAttribute('aria-label', (sel.closest('label') || {}).textContent ? sel.closest('label').firstElementChild.textContent.trim() : 'Choose');
+    if (sel.value) box.value = sel.options[sel.selectedIndex].text;
+    box._select = sel;
+    sel.required = false;   // the server still checks it, with a plain message
+    sel.hidden = true;
+    sel.parentNode.insertBefore(box, sel);
+    box.addEventListener('input', function () { sel.value = ''; });
+  });
+
   document.querySelectorAll('input[data-suggest]').forEach(function (input) {
     var id = 'sug-' + (++seq), list = document.createElement('div'), timer, ctrl, items = [], active = -1;
     var mode = input.dataset.suggestMode || 'go';
@@ -23,6 +39,7 @@
       var form = input.form;
       if (it.all || (!it.url && mode === 'go')) { if (form) form.requestSubmit ? form.requestSubmit() : form.submit(); return; }
       if (mode === 'go' && it.url) { location.href = it.url; return; }
+      if (mode === 'pick') { input._select.value = it.value; input.value = it.label; close(); return; }
       input.value = it.value || it.label; close();
       if (form && input.dataset.suggestSubmit !== 'false') form.requestSubmit ? form.requestSubmit() : form.submit();
     }

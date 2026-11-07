@@ -17,7 +17,7 @@
       {% else %}
       <label class="{{ 'wide' if f.wide }}"><span>{{ f.label }}{% if f.required %} <span aria-hidden="true">*</span>{% endif %}</span>
         {% if f.kind == 'select' %}
-          <select name="{{ f.name }}" {{ 'required' if f.required }}>
+          <select name="{{ f.name }}" {{ 'required' if f.required }}{% if f.suggest %} data-suggest-select="{{ f.suggest }}"{% endif %}>
             <option value="">Choose…</option>
             {% for v, label in f.options %}<option value="{{ v }}" {{ 'selected' if val is not none and v|string == val|string }}>{{ label }}</option>{% endfor %}
           </select>
@@ -26,7 +26,8 @@
         {% else %}
           <input name="{{ f.name }}" value="{{ (val.strftime('%Y-%m-%dT%H:%M') if f.kind == 'datetime' and val and val.strftime else val) if val is not none else '' }}"
                  type="{{ {'int':'number','num':'text','date':'date','datetime':'datetime-local'}.get(f.kind, 'text') }}"
-                 {% if f.kind == 'num' %}inputmode="decimal"{% endif %} {{ 'required' if f.required }}>
+                 {% if f.kind == 'num' %}inputmode="decimal"{% endif %} {{ 'required' if f.required }}
+                 {% if f.suggest %}data-suggest="{{ f.suggest }}" data-suggest-mode="fill" data-suggest-submit="false"{% endif %}>
         {% endif %}
         {% if f.help %}<span class="muted tiny">{{ f.help }}</span>{% endif %}
       </label>

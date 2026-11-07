@@ -129,3 +129,14 @@ def test_add_menu_links(client, sign_in):
     page = client.get('/help').get_data(as_text=True)
     for href in ('/trips/new', '/fuel/new', '/maintenance/new', '/drivers/new'):
         assert f'href="{href}"' in page
+
+
+def test_forms_mark_suggestion_fields(client, sign_in):
+    sign_in(client, 'demo_tier1')
+    html = client.get('/fuel/new').get_data(as_text=True)
+    assert 'data-suggest-select="vehicle"' in html and '<select name="vehicle_id"' in html   # plain list kept for no-JS
+    assert 'data-suggest="vendor"' in html and 'data-suggest-submit="false"' in html
+    html = client.get('/trips/new').get_data(as_text=True)
+    assert 'data-suggest-select="driver"' in html and 'data-suggest="destination"' in html
+    assert 'data-suggest="service_type"' in client.get('/maintenance/new').get_data(as_text=True)
+    assert 'data-suggest="location"' in client.get('/vehicles/new').get_data(as_text=True)
