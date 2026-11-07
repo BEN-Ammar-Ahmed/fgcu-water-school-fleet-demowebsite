@@ -3,7 +3,7 @@
 {% block body %}
 <div class="head"><h1>Documents <span class="muted">({{ rows|length }})</span></h1></div>
 <p class="muted small">You only see documents your access tier is allowed to open.
-  {% if user.can_edit %}To upload, open a vehicle and use the upload box in its Documents section.{% endif %}</p>
+  {% if user.can('documents') %}To upload, open a vehicle and use the upload box in its Documents section.{% endif %}</p>
 <section class="card flush">
 <table class="list">
   <thead><tr><th>Type</th><th>Vehicle</th><th>File</th><th>Expires</th><th>Who can see</th></tr></thead>

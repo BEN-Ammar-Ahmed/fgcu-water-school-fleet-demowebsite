@@ -22,11 +22,12 @@
     <details class="menu" id="add-menu">
       <summary class="btn">{{ icon('plus', 16) }} Add</summary>
       <div class="menu-list">
-        <a href="{{ url_for('vehicle_new') }}">Vehicle</a>
-        <a href="{{ url_for('trip_new') }}">Trip</a>
-        <a href="{{ url_for('fuel_new') }}">Fuel</a>
-        <a href="{{ url_for('maintenance_new') }}">Maintenance</a>
+        {% if user.can('vehicles') %}<a href="{{ url_for('vehicle_new') }}">Vehicle</a>{% endif %}
+        {% if user.can('trips_fuel') %}<a href="{{ url_for('trip_new') }}">Trip</a>
+        <a href="{{ url_for('fuel_new') }}">Fuel</a>{% endif %}
+        {% if user.can('maintenance') %}<a href="{{ url_for('maintenance_new') }}">Maintenance</a>{% endif %}
         {% if user.is_admin %}<a href="{{ url_for('driver_new') }}">Driver</a>{% endif %}
+        {% if user.import_targets %}<a href="{{ url_for('imp.import_upload') }}">Import a spreadsheet</a>{% endif %}
       </div>
     </details>
     {% endif %}

@@ -50,7 +50,7 @@ def test_people_page_shows_level_counts(client, sign_in, dbq):
                  WHERE u.active AND r.role_name = 'Top admin'""")[0]['n']
     sign_in(client, 'demo_tier1')
     page = client.get('/admin/people').get_data(as_text=True)
-    assert 'data-levels' in page and f'<b>{top}</b> Top admin' in page
+    assert 'data-levels' in page and f'<b>{top}</b> Tier 1 · Top admin' in page
 
 
 def test_signed_in_now_list(client, sign_in, dbq):

@@ -1,13 +1,14 @@
-{% extends 'admin/layout.html' %}
+{% extends 'base.html' %}
 {% block title %}Match columns{% endblock %}
-{% block admin %}
+{% block body %}
+<div class="import-page">
 <h1>Match columns</h1>
 <p class="muted">{{ filename }} · {{ '{:,}'.format(nrows) }} row{{ 's' if nrows != 1 }} · importing {{ t.label|lower }}.
   The site guessed which column holds what. Fix any wrong guess, then review the rows.</p>
 
 <ol class="steps" aria-label="Steps"><li class="done">Upload</li><li class="on">Match columns</li><li>Review and save</li></ol>
 
-<form method="post" action="{{ url_for('admin.import_review') }}" id="import-match"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<form method="post" action="{{ url_for('imp.import_review') }}" id="import-match"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="target" value="{{ target }}">
   <input type="hidden" name="filename" value="{{ filename }}">
   <input type="hidden" name="table" value="{{ table }}">
@@ -32,6 +33,7 @@
   </div>
   </section>
   <div class="actions"><button class="btn btn-primary">Review rows</button>
-    <a class="btn ghost" href="{{ url_for('admin.import_upload') }}">Start over</a></div>
+    <a class="btn ghost" href="{{ url_for('imp.import_upload') }}">Start over</a></div>
 </form>
+</div>
 {% endblock %}

@@ -286,3 +286,10 @@ a.stat:hover { border-color: var(--ink2); }
 .import-table input:not([type=checkbox]), .import-table select { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); max-width: 220px; }
 .import-table tr.has-error td { background: var(--warn-red-bg); }
 .import-table td.problems { min-width: 220px; max-width: 280px; }
+.import-page { max-width: 1200px; margin: 0 auto; padding-block: 24px 40px; }
+
+/* Tiers and switches (People page) */
+.abilities .switches { margin-top: 4px; }
+.abilities .switches form { display: grid; gap: 4px; padding: 8px 0; }
+.tier-table td:not(:first-child), .tier-table th:not(:first-child) { text-align: center; }
+.abilities { min-width: 250px; }

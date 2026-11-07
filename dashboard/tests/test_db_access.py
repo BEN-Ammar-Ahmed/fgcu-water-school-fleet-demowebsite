@@ -6,7 +6,7 @@ def test_demo_users_and_license_flag(dbq):
     got = {(r['username'], r['role_name'], r['can_see_licenses'], r['active']) for r in rows}
     assert got == {
         ('demo_tier1', 'Top admin', True, True),
-        ('demo_tier1_backup', 'Admin', False, True),
+        ('demo_tier1_backup', 'Top admin', True, True),
         ('demo_tier2', 'Read-only', False, True),
         ('demo_tier2_licenses', 'Read-only', False, True),
         ('demo_inactive', 'Read-only', False, False),

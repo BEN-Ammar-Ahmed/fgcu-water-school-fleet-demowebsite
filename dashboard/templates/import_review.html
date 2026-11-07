@@ -1,6 +1,7 @@
-{% extends 'admin/layout.html' %}
+{% extends 'base.html' %}
 {% block title %}Review import{% endblock %}
-{% block admin %}
+{% block body %}
+<div class="import-page">
 <h1>Review and save</h1>
 <p class="muted">{{ filename }} · importing {{ t.label|lower }}. Fix anything wrong right in the table, or untick a row to skip it.
   Nothing is saved until you click Save.</p>
@@ -12,7 +13,7 @@
   {% if bad %}<span class="badge badge-overdue" data-bad="{{ bad }}">{{ bad }} with problems</span>{% else %}<span class="badge badge-ok" data-bad="0">No problems</span>{% endif %}
 </p>
 
-<form method="post" action="{{ url_for('admin.import_review') }}" id="import-review"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<form method="post" action="{{ url_for('imp.import_review') }}" id="import-review"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="target" value="{{ target }}">
   <input type="hidden" name="filename" value="{{ filename }}">
   <input type="hidden" name="n" value="{{ rows|length }}">
@@ -44,8 +45,9 @@
   <div class="actions">
     <button class="btn" name="action" value="recheck">Check again</button>
     <button class="btn btn-primary" name="action" value="save">Save {{ nkept }} row{{ 's' if nkept != 1 }}</button>
-    <a class="btn ghost" href="{{ url_for('admin.import_upload') }}">Cancel</a>
+    <a class="btn ghost" href="{{ url_for('imp.import_upload') }}">Cancel</a>
   </div>
   <p class="muted small">Dates: 2026-11-06 or 11/06/2026. Yes/No columns accept yes, y, x or true.</p>
 </form>
+</div>
 {% endblock %}

@@ -17,5 +17,5 @@
   </div>
   {% endfor %}
 </div>
-<p class="muted small">Documents are added from a vehicle's page (Documents section). {% if user.can_manage_admins %}To add many rows at once, <a href="{{ url_for('admin.import_upload') }}">import a spreadsheet</a>.{% endif %}</p>
+<p class="muted small">Documents are added from a vehicle's page (Documents section). {% if user.can_manage_admins %}To add many rows at once, <a href="{{ url_for('imp.import_upload') }}">import a spreadsheet</a>.{% endif %}</p>
 {% endblock %}

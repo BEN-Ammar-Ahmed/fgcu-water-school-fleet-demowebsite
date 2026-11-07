@@ -10,7 +10,7 @@ def test_help_sections(client, sign_in):
     assert r.status_code == 200
     for anchor in ('search', 'tiers', 'adding', 'access'):
         assert f'id="{anchor}"' in page, anchor
-    assert 'Top admin' in page and 'Tier 2 · can edit' in page and 'Tier 2 · view only' in page
+    assert 'Tier 1 · Top admin' in page and 'Tier 2 · Editor' in page and 'Tier 3 · Viewer' in page
 
 
 def test_roles_redirects(client, sign_in):
@@ -34,8 +34,6 @@ def test_tier2_sees_no_edit_controls_on_lists(client, sign_in):
 
 def test_transitional_helper_removed():
     assert not (DASH / 'templates' / 'roles.html').exists()
-    uses = [p.name for p in (DASH / 'templates').glob('*.html') if "can('" in p.read_text(encoding='utf-8')]
-    assert uses == []
     assert 'def _can(' not in (DASH / 'app.py').read_text(encoding='utf-8')
 
 

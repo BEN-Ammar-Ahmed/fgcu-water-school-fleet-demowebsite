@@ -12,7 +12,7 @@
   trailer bearings 6 months). "Unknown" means the site can't work out when it's due: there is no last-done date, or no last-done mileage and current mileage.</p>
 <section class="card flush">
 <table class="list">
-  <thead><tr><th>Vehicle</th><th>Service</th><th>Every</th><th>Last done</th><th>Next due</th>{% if user.can_edit %}<th></th>{% endif %}</tr></thead>
+  <thead><tr><th>Vehicle</th><th>Service</th><th>Every</th><th>Last done</th><th>Next due</th>{% if user.can('maintenance') %}<th></th>{% endif %}</tr></thead>
   <tbody>
   {% for r in rows %}
     <tr>
@@ -22,7 +22,7 @@
       <td>{{ r.last_completed_date.strftime('%b %d, %Y') if r.last_completed_date else '—' }}</td>
       <td>{{ r.due_date.strftime('%b %d, %Y') if r.due_date else '' }}{% if r.due_mileage %}{{ ' or ' if r.due_date }}at {{ '{:,}'.format(r.due_mileage) }} mi{% endif %}{% if not r.due_date and not r.due_mileage %}—{% endif %}
         {% if r.status == 'Overdue' %}<span class="badge badge-overdue">Overdue</span>{% elif r.status == 'Due soon' %}<span class="badge badge-soon">Due soon</span>{% else %}<span class="badge">{{ r.status }}</span>{% endif %}</td>
-      {% if user.can_edit %}
+      {% if user.can('maintenance') %}
       <td><form method="post" action="{{ url_for('maintenance_done', rid=r.rule_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="back" value="{{ request.full_path }}">
         <button class="btn tiny">Mark done</button></form></td>

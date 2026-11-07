@@ -71,7 +71,7 @@ def _sources(user, field):
         return out
     if field == 'vehicle' and user.can_edit:
         return [('Vehicles', _VEHICLE.format(where='WHERE v.active'))]
-    if field == 'driver' and user.can_edit:
+    if field == 'driver' and user.can('trips_fuel'):
         return [('Drivers', """SELECT first_name || ' ' || last_name AS label, '' AS detail, NULL AS url,
                                       driver_id::text AS value, first_name || ' ' || last_name AS _t, 1 AS _n
                                FROM wsb.driver WHERE approved AND active AND email IS NOT NULL""")]

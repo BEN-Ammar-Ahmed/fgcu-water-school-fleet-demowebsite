@@ -9,7 +9,8 @@ import re
 import psycopg2
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
-from tiers import LEVEL_LABELS, LEVELS, ROLE_FOR_LEVEL, assignable_levels, can_change, level_for_role
+from tiers import (DEFAULTS, LEVEL_LABELS, LEVELS, PERMS, ROLE_FOR_LEVEL, assignable_levels, can_change,
+                   level_for_role, switchable)
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 core = None          # the main app module; set by app.py before the blueprint is used
@@ -83,11 +84,15 @@ def keeps_a_top_admin(user_id, new_level, new_active):
 
 def _people():
     rows = core.q(f"""SELECT u.user_id, u.username, u.full_name, u.email, u.active, u.last_seen, r.role_name,
-                             u.last_seen > now() - interval '{ONLINE_MINUTES} minutes' AS online
+                             u.last_seen > now() - interval '{ONLINE_MINUTES} minutes' AS online,
+                             ARRAY(SELECT p.permission FROM wsb.app_user_permission p
+                                   WHERE p.user_id = u.user_id) AS extras
                       FROM wsb.app_user u JOIN wsb.app_role r USING (role_id)""")
     order = {l: i for i, l in enumerate(LEVELS)}
     for r in rows:
         r['level'] = level_for_role(r['role_name'])
+        r['switchable'] = switchable(r['level'])
+        r['on'] = set(r['extras'] or ()) & set(r['switchable'])
     rows.sort(key=lambda r: (not r['active'], order[r['level']], r['full_name'].lower()))
     return rows
 
@@ -107,6 +112,7 @@ def _render_people(errors=(), form=None, status=200):
         r['changeable'] = r['user_id'] != me.user_id and can_change(me, r['level'])
     g.page_label = 'Admin: People & access'
     return render_template('admin/people.html', rows=rows, me=me, assignable=assignable_levels(me), by_level=level_counts(),
+                           perms=PERMS, defaults=DEFAULTS,
                            errors=errors, form=form or {}, text=text, show=show), status
 
 
@@ -196,6 +202,30 @@ def change_access(uid):
     return redirect(url_for('admin.people'))
 
 
+@bp.route('/people/<int:uid>/switches', methods=['POST'])
+def change_switches(uid):
+    """Turn extra abilities on or off for one person (on top of their tier's defaults)."""
+    me, t = _target(uid)
+    allowed = switchable(t['level'])
+    want = {p for p in allowed if request.form.get(f'perm_{p}') == 'on'}
+    have = {r['permission'] for r in core.q('SELECT permission FROM wsb.app_user_permission WHERE user_id = %s', (uid,))}
+    have &= set(allowed)
+    if want == have:
+        return redirect(url_for('admin.people'))
+    conn = core.db()
+    with conn.cursor() as cur:
+        cur.execute('DELETE FROM wsb.app_user_permission WHERE user_id = %s', (uid,))
+        for p in sorted(want):
+            cur.execute('INSERT INTO wsb.app_user_permission (user_id, permission, granted_by) VALUES (%s, %s, %s)',
+                        (uid, p, me.full_name))
+    conn.commit()
+    details = [{'field': PERMS[p], 'old': 'Off' if p in want else 'On', 'new': 'On' if p in want else 'Off'}
+               for p in allowed if (p in want) != (p in have)]
+    core.log_activity('access', f"Changed {t['full_name']}'s extra abilities", details=details)
+    flash(f"Saved {t['full_name']}'s abilities.", 'ok')
+    return redirect(url_for('admin.people'))
+
+
 # ---------------------------------------------------------------------------
 # Activity (read-only list of the append-only log)
 # ---------------------------------------------------------------------------
@@ -261,89 +291,3 @@ def data():
         cards.insert(2, ('licenses', "Driver's licenses", n['licenses'], None))
     g.page_label = 'Admin: Manage data'
     return render_template('admin/data.html', cards=cards, n=n)
-
-
-# ---------------------------------------------------------------------------
-# Import a spreadsheet (top admins only). Upload → match columns → review → save. See importer.py.
-# The file is read in memory and never stored; the rows travel between steps inside the form.
-# ---------------------------------------------------------------------------
-def _top_admin_only():
-    if not core.current_user().can_manage_admins:
-        abort(403)
-
-
-@bp.route('/import', methods=['GET', 'POST'])
-def import_upload():
-    import json
-    import importer
-    _top_admin_only()
-    g.page_label = 'Admin: Import'
-    target = request.form.get('target', '')
-    if request.method == 'POST':
-        f = request.files.get('file')
-        if target not in importer.TARGETS:
-            flash('Choose what the file holds.', 'error')
-        elif not f or not f.filename:
-            flash('Choose a file to upload.', 'error')
-        else:
-            try:
-                headers, rows = importer.read_table(f.filename, f.read())
-            except ValueError as e:
-                flash(str(e), 'error')
-            else:
-                return render_template('admin/import_match.html', target=target, t=importer.TARGETS[target],
-                                       fields=importer.fields(target), headers=headers, sample=rows[:3],
-                                       nrows=len(rows), mapping=importer.guess_mapping(target, headers),
-                                       filename=f.filename, table=json.dumps({'headers': headers, 'rows': rows}),
-                                       hidden=importer.HIDDEN, mask=importer.mask)
-    return render_template('admin/import.html', targets=importer.TARGETS, target=target)
-
-
-@bp.route('/import/review', methods=['POST'])
-def import_review():
-    import json
-    import importer
-    _top_admin_only()
-    g.page_label = 'Admin: Import'
-    me = core.current_user()
-    target, filename = request.form.get('target', ''), request.form.get('filename', '')[:200]
-    if target not in importer.TARGETS:
-        abort(400)
-    fl = importer.fields(target)
-    if 'table' in request.form:          # coming from the match step
-        try:
-            table = json.loads(request.form['table'])
-            rows = table['rows']
-        except (ValueError, KeyError, TypeError):
-            abort(400)
-        mapping = {}
-        for f in fl:
-            v = request.form.get(f'map_{f.name}', '')
-            mapping[f.name] = int(v) if v.isdigit() and int(v) < len(table['headers']) else None
-        records = importer.apply_mapping(target, mapping, rows)
-        keep = [True] * len(records)
-    else:                                # coming back from the review step (edited cells)
-        n = min(int(request.form.get('n', '0') or 0), importer.MAX_ROWS)
-        records = [{f.name: request.form.get(f'c{i}_{f.name}', '') for f in fl} for i in range(n)]
-        keep = [request.form.get(f'keep{i}') == 'on' for i in range(n)]
-    checked = importer.check(core.q, me, target, records)
-    kept = [c for c, k in zip(checked, keep) if k]
-    bad = sum(1 for c in kept if c['errors'])
-    if request.form.get('action') == 'save':
-        if not kept:
-            flash('No rows are ticked, so nothing was saved.', 'error')
-        elif bad:
-            flash(f'{bad} ticked row{"s have" if bad != 1 else " has"} problems. Fix them or untick them, then save again.', 'error')
-        else:
-            try:
-                n = importer.save(core.db(), me, target, [c['values'] for c in kept])
-            except psycopg2.Error as e:
-                flash(f"Nothing was saved. Row {getattr(e, 'import_row', '?')} was refused by the database: "
-                      f"{core.db_error_message(e)}", 'error')
-            else:
-                core.log_activity('change', f"Imported {n} {importer.TARGETS[target]['label'].lower()} from {filename or 'a file'}")
-                flash(f"Saved {n} row{'s' if n != 1 else ''}.", 'ok')
-                return redirect(url_for('admin.data'))
-    return render_template('admin/import_review.html', target=target, t=importer.TARGETS[target], fields=fl,
-                           rows=checked, keep=keep, filename=filename, bad=bad, nkept=len(kept),
-                           hidden=importer.HIDDEN, mask=importer.mask)

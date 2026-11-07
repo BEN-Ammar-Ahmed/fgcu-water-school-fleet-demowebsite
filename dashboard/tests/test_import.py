@@ -23,7 +23,7 @@ def _csv(rows):
 
 
 def _upload(client, target, name, data):
-    return client.post('/admin/import', data={'target': target, 'file': (io.BytesIO(data), name)},
+    return client.post('/import', data={'target': target, 'file': (io.BytesIO(data), name)},
                        content_type='multipart/form-data')
 
 
@@ -39,7 +39,7 @@ def _match_form(html):
 
 def _review(client, target, name, data):
     html = _upload(client, target, name, data).get_data(as_text=True)
-    return client.post('/admin/import/review', data=_match_form(html))
+    return client.post('/import/review', data=_match_form(html))
 
 
 def _review_form(html):
@@ -81,10 +81,23 @@ def test_mask():
 
 
 # ----- who can get in -------------------------------------------------------------------------
-@pytest.mark.parametrize('who,code', [('demo_tier1', 200), ('demo_tier1_backup', 403), ('demo_editor', 403), ('demo_tier2', 403)])
-def test_top_admins_only(client, sign_in, who, code):
+@pytest.mark.parametrize('who,code', [('demo_tier1', 200), ('demo_tier1_backup', 200), ('demo_editor', 200), ('demo_tier2', 403)])
+def test_who_can_open_import(client, sign_in, who, code):
+    """Anyone who can enter some data by hand can import it; viewers without switches can't."""
     sign_in(client, who)
-    assert client.get('/admin/import').status_code == code
+    assert client.get('/import').status_code == code
+
+
+def test_editor_sees_only_what_they_may_enter(client, sign_in, dbq):
+    sign_in(client, 'demo_editor')
+    html = client.get('/import').get_data(as_text=True)
+    assert 'value="maintenance"' in html and 'value="fuel"' not in html and 'value="drivers"' not in html
+    r = client.post('/import', data={'target': 'drivers', 'file': (io.BytesIO(b'a,b'), 'x.csv')},
+                    content_type='multipart/form-data')
+    assert r.status_code == 403
+    dbq("""INSERT INTO wsb.app_user_permission (user_id, permission)
+           SELECT user_id, 'trips_fuel' FROM wsb.app_user WHERE username = 'demo_editor'""")
+    assert 'value="fuel"' in client.get('/import').get_data(as_text=True)
 
 
 # ----- the whole flow ---------------------------------------------------------------------------
@@ -100,7 +113,7 @@ def test_fuel_import_flow_saves_after_review(client, sign_in, dbq):
     assert dbq('SELECT count(*) n FROM wsb.fuel_record')[0]['n'] == before        # review saves nothing
     form = _review_form(html)
     form['action'] = 'save'
-    r = client.post('/admin/import/review', data=form)
+    r = client.post('/import/review', data=form)
     assert r.status_code == 302
     assert dbq('SELECT count(*) n FROM wsb.fuel_record')[0]['n'] == before + 2
     assert dbq("SELECT total_cost FROM wsb.fuel_record WHERE vendor = 'Gas Stop' ORDER BY fuel_date LIMIT 1")[0]['total_cost'] == __import__('decimal').Decimal('80.10')
@@ -119,13 +132,13 @@ def test_problems_block_saving_until_fixed_or_unticked(client, sign_in, dbq):
     before = dbq('SELECT count(*) n FROM wsb.fuel_record')[0]['n']
     form = _review_form(html)
     form['action'] = 'save'
-    r = client.post('/admin/import/review', data=form)
+    r = client.post('/import/review', data=form)
     assert r.status_code == 200 and 'have problems' in r.get_data(as_text=True)
     assert dbq('SELECT count(*) n FROM wsb.fuel_record')[0]['n'] == before
     # Fix row 2 in the table, untick row 1, then save.
     form.pop('keep0')
     form['c1_fuel_date'], form['c1_gallons'] = '2026-11-02', '9.5'
-    r = client.post('/admin/import/review', data=form)
+    r = client.post('/import/review', data=form)
     assert r.status_code == 302
     assert dbq('SELECT count(*) n FROM wsb.fuel_record')[0]['n'] == before + 2
 
@@ -156,7 +169,7 @@ def test_all_or_nothing_when_the_database_refuses_a_row(client, sign_in, dbq, ap
     form = _review_form(html)
     form['action'] = 'save'
     form['c1_make'] = 'X' * 200                          # too long for the column: the database refuses row 2
-    r = client.post('/admin/import/review', data=form)
+    r = client.post('/import/review', data=form)
     assert r.status_code == 200 and 'Nothing was saved' in r.get_data(as_text=True)
     assert dbq("SELECT count(*) n FROM wsb.vehicle WHERE asset_number IN ('NEW-A', 'NEW-B')")[0]['n'] == 0
 
@@ -169,7 +182,7 @@ def test_driver_license_numbers_are_masked_and_saved_for_top_admin(client, sign_
     assert '●●●●●●6789' in html and '>P123456789<' not in html
     form = _review_form(html)
     form['action'] = 'save'
-    assert client.post('/admin/import/review', data=form).status_code == 302
+    assert client.post('/import/review', data=form).status_code == 302
     d = dbq("""SELECT d.approved, l.license_number, l.expiration_date FROM wsb.driver d
                JOIN wsb.driver_license l USING (driver_id) WHERE d.email = 'pat.import@example.edu'""")[0]
     assert d['approved'] is True and d['license_number'] == 'P123456789' and str(d['expiration_date']) == '2030-01-31'
@@ -193,12 +206,12 @@ def test_upload_errors_are_messages(client, sign_in):
     sign_in(client, 'demo_tier1')
     r = _upload(client, 'fuel', 'scan.pdf', b'%PDF-1.4')
     assert r.status_code == 200 and 'Upload an Excel' in r.get_data(as_text=True)
-    r = client.post('/admin/import', data={'target': 'nope', 'file': (io.BytesIO(b'a,b'), 'x.csv')},
+    r = client.post('/import', data={'target': 'nope', 'file': (io.BytesIO(b'a,b'), 'x.csv')},
                     content_type='multipart/form-data')
     assert 'Choose what the file holds' in r.get_data(as_text=True)
 
 
 def test_tampered_review_input_is_a_400_not_a_crash(client, sign_in):
     sign_in(client, 'demo_tier1')
-    assert client.post('/admin/import/review', data={'target': 'fuel', 'table': '{not json'}).status_code == 400
-    assert client.post('/admin/import/review', data={'target': 'bogus'}).status_code == 400
+    assert client.post('/import/review', data={'target': 'fuel', 'table': '{not json'}).status_code == 400
+    assert client.post('/import/review', data={'target': 'bogus'}).status_code == 400

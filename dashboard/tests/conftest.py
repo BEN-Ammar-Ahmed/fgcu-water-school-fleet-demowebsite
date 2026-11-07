@@ -32,6 +32,7 @@ SQL_FILES = [
     '04_import_staging.sql', '05_procedures.sql', '07_web_access.sql', '08_admin_levels.sql', '09_demo_users.sql',
     '10_suggestions.sql',
     '11_vehicle_name.sql',
+    '12_tiers.sql',
 ]
 
 

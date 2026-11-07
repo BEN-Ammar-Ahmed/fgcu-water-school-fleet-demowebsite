@@ -12,7 +12,7 @@ INSERT INTO wsb.app_user (username, full_name, email, role_id, can_see_licenses,
 SELECT u.username, u.full_name, u.email, r.role_id, u.licenses, u.active
 FROM (VALUES
     ('demo_tier1',          'Fleet Manager',    'fleet.manager@example.edu',    'Top admin', TRUE,  TRUE),
-    ('demo_tier1_backup',   'Backup Fleet Manager',   'fleet.backup@example.edu',     'Admin',     FALSE, TRUE),
+    ('demo_tier1_backup',   'Backup Fleet Manager',   'fleet.backup@example.edu',     'Top admin', TRUE,  TRUE),
     ('demo_editor',         'Boat Captain',     'editor.staff@example.edu',     'Staff',     FALSE, TRUE),
     ('demo_tier2',          'Campus Staff',     'campus.staff@example.edu',     'Read-only', FALSE, TRUE),
     ('demo_tier2_licenses', 'Insurance Office', 'insurance.office@example.edu', 'Read-only', FALSE, TRUE),

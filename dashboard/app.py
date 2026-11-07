@@ -65,14 +65,15 @@ def current_user():
     return g.user
 
 
-def require(edit=False, delete=False, licenses=False, admin=False):
+def require(perm=None, delete=False, licenses=False, admin=False):
+    """Signed in, plus (optionally) one ability from tiers.PERMS, delete rights, license access or Tier 1."""
     def deco(f):
         @wraps(f)
         def inner(*a, **k):
             u = current_user()
             if not u:
                 return redirect(url_for('login', next=request.path))
-            if ((edit and not u.can_edit) or (delete and not u.can_delete)
+            if ((perm and not u.can(perm)) or (delete and not u.can_delete)
                     or (licenses and not u.can_see_licenses) or (admin and not u.is_admin)):
                 abort(403)
             return f(*a, **k)
@@ -459,7 +460,7 @@ def form_vehicle():
 
 
 @app.route('/vehicles/new', methods=['GET', 'POST'])
-@require(edit=True)
+@require(perm='vehicles')
 def vehicle_new():
     if request.method == 'POST':
         d = form_vehicle()
@@ -477,7 +478,7 @@ def vehicle_new():
 
 
 @app.route('/vehicles/<int:vid>/edit', methods=['GET', 'POST'])
-@require(edit=True)
+@require(perm='vehicles')
 def vehicle_edit(vid):
     v = q('SELECT * FROM wsb.vehicle WHERE vehicle_id = %s', (vid,), one=True) or abort(404)
     if request.method == 'POST':
@@ -565,7 +566,7 @@ def _entry_form(title, fields, call_sql, anchor, defaults=None):
 
 
 @app.route('/trips/new', methods=['GET', 'POST'])
-@require(edit=True)
+@require(perm='trips_fuel')
 def trip_new():
     drivers = [(d['driver_id'], f"{d['first_name']} {d['last_name']}") for d in q(
         """SELECT driver_id, first_name, last_name FROM wsb.driver WHERE approved AND active AND email IS NOT NULL
@@ -586,7 +587,7 @@ def trip_new():
 
 
 @app.route('/fuel/new', methods=['GET', 'POST'])
-@require(edit=True)
+@require(perm='trips_fuel')
 def fuel_new():
     fields = [Field('vehicle_id', 'Vehicle', 'select', True, _vehicle_choices(), suggest='vehicle'),
               Field('fuel_date', 'Date', 'date', True), Field('gallons', 'Gallons', 'num', True),
@@ -599,7 +600,7 @@ def fuel_new():
 
 
 @app.route('/maintenance/new', methods=['GET', 'POST'])
-@require(edit=True)
+@require(perm='maintenance')
 def maintenance_new():
     fields = [Field('vehicle_id', 'Vehicle', 'select', True, _vehicle_choices(), suggest='vehicle'),
               Field('service_date', 'Date', 'date', True),
@@ -732,7 +733,7 @@ def maintenance_page():
 
 
 @app.route('/maintenance/<int:rid>/done', methods=['POST'])
-@require(edit=True)
+@require(perm='maintenance')
 def maintenance_done(rid):
     try:
         day = datetime.date.fromisoformat(request.form.get('date') or datetime.date.today().isoformat())
@@ -754,7 +755,7 @@ def maintenance_done(rid):
 
 
 @app.route('/vehicles/<int:vid>/rules', methods=['POST'])
-@require(edit=True)
+@require(perm='maintenance')
 def rule_add(vid):
     try:
         run("""INSERT INTO wsb.maintenance_rule (vehicle_id, maintenance_type, mileage_interval, time_interval_months,
@@ -781,7 +782,7 @@ def rule_delete(rid):
 # Documents (upload, list, download) - filtered by role
 # ---------------------------------------------------------------------------
 @app.route('/vehicles/<int:vid>/documents', methods=['POST'])
-@require(edit=True)
+@require(perm='documents')
 def doc_upload(vid):
     q('SELECT 1 FROM wsb.vehicle WHERE vehicle_id = %s', (vid,), one=True) or abort(404)
     f = request.files.get('file')
@@ -910,6 +911,9 @@ def server_error(e):
 import admin  # noqa: E402
 admin.core = sys.modules[__name__]
 app.register_blueprint(admin.bp)
+import import_views  # noqa: E402
+import_views.core = sys.modules[__name__]
+app.register_blueprint(import_views.imp)
 
 
 if __name__ == '__main__':

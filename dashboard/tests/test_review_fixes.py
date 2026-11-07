@@ -58,10 +58,10 @@ def test_tier2_cannot_search_drivers(client, sign_in):
     assert 'Drivers ·' not in page and 'kind=drivers' not in page
 
 
-def test_driver_saved_without_license_access_goes_to_driver_search(client, sign_in):
+def test_driver_saved_by_top_admin_goes_to_driver_page(client, sign_in):
     sign_in(client, 'demo_tier1_backup')
     r = client.post('/drivers/new', data={'first_name': 'Nia', 'last_name': 'Vale', 'email': 'nvale@example.edu'})
-    assert r.status_code == 302 and 'kind=drivers' in r.headers['Location'] and 'Vale' in r.headers['Location']
+    assert r.status_code == 302 and '/drivers/' in r.headers['Location']
 
 
 def test_far_future_dates_do_not_crash(client, sign_in):
@@ -84,4 +84,4 @@ def test_demo_signin_only_for_demo_users(client, dbq):
 def test_help_says_tier1_sees_driver_emails(client, sign_in):
     sign_in(client, 'demo_tier2')
     page = client.get('/help').get_data(as_text=True)
-    assert '<td>Driver emails</td><td>Yes</td>' in page
+    assert "<td>Drivers, driver's licenses, Admin area, add people</td><td>no</td><td>no</td><td>Yes</td>" in page.replace('&#39;', "'")

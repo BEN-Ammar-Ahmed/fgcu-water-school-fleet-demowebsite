@@ -17,7 +17,7 @@
       {% for l in assignable|reverse %}<option value="{{ l }}" {{ 'selected' if form.level == l }}>{{ level_labels[l] }}</option>{% endfor %}
     </select></label>
     <div class="wide actions"><button class="btn btn-primary">Add person</button>
-      <span class="muted small">{% if me.can_manage_admins %}As a top admin you can give any level.{% else %}Admins can add Tier 2 people. Ask a top admin to add an admin.{% endif %}</span></div>
+      <span class="muted small">After adding someone, you can switch on extra abilities for them in the list below.</span></div>
   </form>
 </section>
 
@@ -33,7 +33,7 @@
 
 <section class="card flush">
 <table class="table">
-  <thead><tr><th>Person</th><th>Access level</th><th>Confidential data</th><th>Status</th><th>Last active</th><th></th></tr></thead>
+  <thead><tr><th>Person</th><th>Tier</th><th>Abilities</th><th>Status</th><th>Last active</th><th></th></tr></thead>
   <tbody>
   {% for p in rows %}
     <tr class="{{ 'removed' if not p.active }}">
@@ -48,7 +48,22 @@
         </form>
         {% else %}{{ level_labels[p.level] }}{% endif %}
       </td>
-      <td>{% if p.level == 'top_admin' %}<span class="badge badge-dark">Yes</span>{% else %}<span class="muted small">No</span>{% endif %}</td>
+      <td class="abilities">
+        {% if p.level == 'top_admin' %}<span class="muted small">Everything, incl. driver's licenses</span>
+        {% else %}
+          <span class="small">{% for k in defaults[p.level] %}{{ perms[k].split(' (')[0] }}{{ ', ' if not loop.last }}{% else %}View only{% endfor %}{% if p.on %}<b> + {{ p.on|length }} extra</b>{% endif %}</span>
+          {% if p.changeable and p.active %}
+          <details class="switches"><summary class="small">Extra abilities</summary>
+            <form method="post" action="{{ url_for('admin.change_switches', uid=p.user_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              {% for k in p.switchable %}
+              <label class="check small"><input type="checkbox" name="perm_{{ k }}" {{ 'checked' if k in p.on }}> {{ perms[k] }}</label>
+              {% endfor %}
+              <button class="btn tiny">Save abilities</button>
+            </form>
+          </details>
+          {% endif %}
+        {% endif %}
+      </td>
       <td>{% if not p.active %}Access removed{% elif p.online %}<span class="dot" aria-hidden="true"></span>Signed in{% else %}<span class="dot off" aria-hidden="true"></span>Offline{% endif %}</td>
       <td class="muted small">{{ p.last_seen.strftime('%b %d, %H:%M') if p.last_seen else 'Never' }}</td>
       <td>
@@ -71,16 +86,10 @@
 </section>
 
 <section class="card">
-  <h2>What each level can do</h2>
-  <table class="table">
-    <thead><tr><th>Level</th><th>Confidential (licenses)</th><th>View</th><th>Add &amp; edit</th><th>Delete</th><th>Manage people</th></tr></thead>
-    <tbody>
-      <tr><td><b>Top admin</b></td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Everyone</td></tr>
-      <tr><td><b>Admin</b></td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Tier 2 people only</td></tr>
-      <tr><td><b>Tier 2 · can edit</b></td><td>No</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td></tr>
-      <tr><td><b>Tier 2 · view only</b></td><td>No</td><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
-    </tbody>
-  </table>
-  <p class="muted small">Only a top admin can make someone an admin or top admin. The site always keeps at least one top admin, and nobody can change their own access. Every change is recorded in Activity.</p>
+  <h2>What each tier can do</h2>
+  {% include '_tier_table.html' %}
+  <p class="muted small">"Switch" means off by default; a top admin can turn it on for one person with "Extra abilities" above.
+    Driver's licenses and managing people are Tier 1 only. The site always keeps at least one top admin, and nobody can
+    change their own access. Every change is recorded in Activity.</p>
 </section>
 {% endblock %}

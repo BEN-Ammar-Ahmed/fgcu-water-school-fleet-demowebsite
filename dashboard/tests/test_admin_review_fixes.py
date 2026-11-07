@@ -31,6 +31,8 @@ def test_license_searches_are_not_shown_to_admins(client, sign_in, dbq):
 
 def test_editors_cannot_see_driver_emails(client, sign_in, dbq):
     did = dbq("SELECT driver_id FROM wsb.driver WHERE email = 'arivera@example.edu'")[0]['driver_id']
+    dbq("""INSERT INTO wsb.app_user_permission (user_id, permission)
+           SELECT user_id, 'trips_fuel' FROM wsb.app_user WHERE username = 'demo_editor'""")   # Tier 2 needs a switch for trips
     sign_in(client, 'demo_editor')
     assert client.get('/drivers/new').status_code == 403
     assert client.get(f'/drivers/{did}/edit').status_code == 403
@@ -41,7 +43,9 @@ def test_editors_cannot_see_driver_emails(client, sign_in, dbq):
     assert 'href="/drivers/new"' not in client.get('/help').get_data(as_text=True)
 
 
-def test_editor_can_still_log_a_trip(client, sign_in, dbq):
+def test_editor_with_trips_switch_logs_a_trip(client, sign_in, dbq):
+    dbq("""INSERT INTO wsb.app_user_permission (user_id, permission)
+           SELECT user_id, 'trips_fuel' FROM wsb.app_user WHERE username = 'demo_editor'""")   # Tier 2 needs a switch for trips
     vid = dbq("SELECT vehicle_id FROM wsb.vehicle WHERE asset_number = 'DEMO-T01'")[0]['vehicle_id']
     did = dbq("SELECT driver_id FROM wsb.driver WHERE email = 'arivera@example.edu'")[0]['driver_id']
     sign_in(client, 'demo_editor')

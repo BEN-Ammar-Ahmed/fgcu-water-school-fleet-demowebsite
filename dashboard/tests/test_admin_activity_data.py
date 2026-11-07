@@ -44,12 +44,12 @@ def test_bad_activity_filters_do_not_crash(client, sign_in):
 
 
 def test_manage_data_counts_and_links(client, sign_in):
-    sign_in(client, 'demo_tier1_backup')
+    sign_in(client, 'demo_editor')
+    assert client.get('/admin/data').status_code == 403
+    sign_in(client, 'demo_tier1')
     page = client.get('/admin/data').get_data(as_text=True)
     assert 'data-count="vehicles">8<' in page and 'data-count="trips">8<' in page
     assert 'browse=1' in page and 'kind=vehicles' in page
-    assert 'data-count="licenses"' not in page and 'kind=licenses' not in page
-    sign_in(client, 'demo_tier1')
     page = client.get('/admin/data').get_data(as_text=True)
     assert 'Confidential' in page and 'data-count="licenses">6<' in page
 
@@ -63,7 +63,7 @@ def test_browse_lists_everything_of_one_kind(client, sign_in, kind, label, n):
 
 
 def test_browse_licenses_only_for_top_admin(client, sign_in):
-    sign_in(client, 'demo_tier1_backup')
+    sign_in(client, 'demo_editor')
     r = client.get('/search?kind=licenses&browse=1')
     assert 'DEMO-DL-' not in r.get_data(as_text=True)
     sign_in(client, 'demo_tier1')

@@ -87,8 +87,8 @@ def test_tier2_forbidden_everywhere(client, sign_in, path):
 
 def test_driver_license_fields_need_flag(client, sign_in, dbq):
     did = dbq("SELECT driver_id FROM wsb.driver WHERE email = 'spatel@example.edu'")[0]['driver_id']
-    sign_in(client, 'demo_tier1_backup')
-    assert 'License number' not in client.get('/drivers/new').get_data(as_text=True)
+    sign_in(client, 'demo_editor')
+    assert client.get('/drivers/new').status_code == 403
     assert client.get(f'/drivers/{did}').status_code == 403
     sign_in(client, 'demo_tier1')
     assert 'License number' in client.get('/drivers/new').get_data(as_text=True)
@@ -107,12 +107,13 @@ def test_add_driver_with_license(client, sign_in, dbq):
     assert row['approved'] is True and row['license_number'] == 'X123'
 
 
-def test_backup_cannot_set_license_by_post(client, sign_in, dbq):
-    sign_in(client, 'demo_tier1_backup')
-    client.post('/drivers/new', data={'first_name': 'Kai', 'last_name': 'Lane', 'email': 'klane@example.edu',
-                                      'license_number': 'SNEAKY'})
+def test_non_top_admin_cannot_add_drivers_or_licenses_by_post(client, sign_in, dbq):
+    sign_in(client, 'demo_editor')
+    r = client.post('/drivers/new', data={'first_name': 'Kai', 'last_name': 'Lane', 'email': 'klane@example.edu',
+                                          'license_number': 'SNEAKY'})
+    assert r.status_code == 403
     assert dbq("SELECT count(*) n FROM wsb.driver_license WHERE license_number = 'SNEAKY'")[0]['n'] == 0
-    assert dbq("SELECT count(*) n FROM wsb.driver WHERE email = 'klane@example.edu'")[0]['n'] == 1
+    assert dbq("SELECT count(*) n FROM wsb.driver WHERE email = 'klane@example.edu'")[0]['n'] == 0
 
 
 def test_edit_driver(client, sign_in, dbq):

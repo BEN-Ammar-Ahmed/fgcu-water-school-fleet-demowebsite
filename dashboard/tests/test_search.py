@@ -60,7 +60,7 @@ def test_licenses_only_with_flag(find):
     assert 'licenses' not in find('demo_tier2', 'Patel')
     assert 'licenses' not in find('demo_tier2', 'Patel', 'licenses')
     assert 'licenses' not in find('demo_tier2_licenses', 'Patel')
-    assert 'licenses' not in find('demo_tier1_backup', 'Patel')   # admin: no confidential data
+    assert 'licenses' not in find('demo_editor', 'Patel')          # Tier 2: no confidential data
     assert find('demo_tier1', 'Patel')['licenses']['total'] == 1
 
 

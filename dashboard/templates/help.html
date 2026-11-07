@@ -19,24 +19,13 @@
 
 <section class="card section" id="tiers">
   <h2>{{ icon('lock', 16) }} Who can see what</h2>
-  <table class="table">
-    <thead><tr><th></th><th>Top admin</th><th>Admin</th><th>Tier 2 · can edit</th><th>Tier 2 · view only</th></tr></thead>
-    <tbody>
-      <tr><td>Search and view vehicles, trips, fuel, maintenance, costs</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-      <tr><td>Documents</td><td>All</td><td>All</td><td>General and Staff</td><td>General and Staff</td></tr>
-      <tr><td>Driver emails</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td></tr>
-      <tr><td>Driver's licenses (confidential)</td><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
-      <tr><td>Add and edit records</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td></tr>
-      <tr><td>Delete records</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td></tr>
-      <tr><td>Admin area (stats, people, activity)</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td></tr>
-      <tr><td>Give people access</td><td>Anyone, any level</td><td>Tier 2 people only</td><td>No</td><td>No</td></tr>
-    </tbody>
-  </table>
+  {% include '_tier_table.html' %}
+  <p class=\"muted small\">\"Switch\" means a top admin can turn it on for one person.</p>
   <p class="muted small">Your level is shown next to your name at the top right.</p>
 </section>
 
 <section class="card section" id="adding">
-  <h2>{{ icon('plus', 16) }} Adding records (Tier 2 · can edit and up)</h2>
+  <h2>{{ icon('plus', 16) }} Adding records</h2>
   <ul class="plain">
     <li>Use <b>Add</b> in the top bar for a vehicle, trip, fuel purchase, service or driver. On a vehicle's page, each section also has its own add button, which fills in the vehicle for you.</li>
     <li>Trips can only use approved, active drivers. A trip without an end time is shown as "In progress".</li>

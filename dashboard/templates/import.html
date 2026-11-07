@@ -1,6 +1,7 @@
-{% extends 'admin/layout.html' %}
+{% extends 'base.html' %}
 {% block title %}Import a spreadsheet{% endblock %}
-{% block admin %}
+{% block body %}
+<div class="import-page">
 <h1>Import a spreadsheet</h1>
 <p class="muted">Add many rows at once from an Excel (.xlsx) or CSV file. You'll match the columns and check every row
   before anything is saved. The file itself is not kept.</p>
@@ -29,4 +30,5 @@
     <li>Everything is saved together, or nothing is. The import is recorded in Activity.</li>
   </ul>
 </section>
+</div>
 {% endblock %}

@@ -9,7 +9,7 @@
     <a href="{{ url_for('admin.people') }}" class="{{ 'on' if section in ('people', 'add_person') }}">People &amp; access</a>
     {% if 'admin.activity' in url_map_endpoints %}<a href="{{ url_for('admin.activity') }}" class="{{ 'on' if section == 'activity' }}">Activity</a>{% endif %}
     {% if 'admin.data' in url_map_endpoints %}<a href="{{ url_for('admin.data') }}" class="{{ 'on' if section == 'data' }}">Manage data</a>{% endif %}
-    {% if user.can_manage_admins %}<a href="{{ url_for('admin.import_upload') }}" class="{{ 'on' if section in ('import_upload', 'import_review') }}">Import a spreadsheet</a>{% endif %}
+    {% if user.can_manage_admins %}<a href="{{ url_for('imp.import_upload') }}" class="{{ 'on' if False }}">Import a spreadsheet</a>{% endif %}
     <h4>Site</h4>
     <a href="{{ url_for('dashboard') }}">&larr; Back to search</a>
   </nav>
