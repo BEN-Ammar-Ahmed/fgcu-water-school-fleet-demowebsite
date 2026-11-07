@@ -9,7 +9,7 @@
   </div>
 </div>
 <p class="muted small">Intervals are proposed (oil change 5,000 mi / 6 months, wipers 6 months, boat 100-hour service 12 months,
-  trailer bearings 6 months). "Unknown" means there is no service in the FY22–FY26 repair logs.</p>
+  trailer bearings 6 months). "Unknown" means the site can't work out when it's due: there is no last-done date, or no last-done mileage and current mileage.</p>
 <section class="card flush">
 <table class="list">
   <thead><tr><th>Vehicle</th><th>Service</th><th>Every</th><th>Last done</th><th>Next due</th>{% if user.can_edit %}<th></th>{% endif %}</tr></thead>
@@ -18,9 +18,9 @@
     <tr>
       <td><a href="{{ url_for('vehicle', vid=r.vehicle_id) }}">{{ display_name(r) }}</a></td>
       <td>{{ r.maintenance_type }}</td>
-      <td>{% if r.mileage_interval %}{{ '{:,}'.format(r.mileage_interval) }} mi / {% endif %}{{ r.time_interval_months }} mo</td>
+      <td>{% if r.mileage_interval %}{{ '{:,}'.format(r.mileage_interval) }} mi{% endif %}{% if r.mileage_interval and r.time_interval_months %} / {% endif %}{% if r.time_interval_months %}{{ r.time_interval_months }} mo{% endif %}</td>
       <td>{{ r.last_completed_date.strftime('%b %d, %Y') if r.last_completed_date else '—' }}</td>
-      <td>{{ r.due_date.strftime('%b %d, %Y') if r.due_date else '—' }}
+      <td>{{ r.due_date.strftime('%b %d, %Y') if r.due_date else '' }}{% if r.due_mileage %}{{ ' or ' if r.due_date }}at {{ '{:,}'.format(r.due_mileage) }} mi{% endif %}{% if not r.due_date and not r.due_mileage %}—{% endif %}
         {% if r.status == 'Overdue' %}<span class="badge badge-overdue">Overdue</span>{% elif r.status == 'Due soon' %}<span class="badge badge-soon">Due soon</span>{% else %}<span class="badge">{{ r.status }}</span>{% endif %}</td>
       {% if user.can_edit %}
       <td><form method="post" action="{{ url_for('maintenance_done', rid=r.rule_id) }}">

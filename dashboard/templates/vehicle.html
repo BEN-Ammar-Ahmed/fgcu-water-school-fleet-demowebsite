@@ -63,7 +63,7 @@
         <td>{{ r.maintenance_type }}</td>
         <td>{% if r.mileage_interval %}{{ '{:,}'.format(r.mileage_interval) }} mi{% endif %}{% if r.mileage_interval and r.time_interval_months %} / {% endif %}{% if r.time_interval_months %}{{ r.time_interval_months }} mo{% endif %}</td>
         <td>{{ day(r.last_completed_date) }}</td>
-        <td>{{ day(r.due_date) }}</td>
+        <td>{{ day(r.due_date) if r.due_date else '' }}{% if r.due_mileage %}{{ ' or ' if r.due_date }}at {{ '{:,}'.format(r.due_mileage) }} mi{% endif %}{% if not r.due_date and not r.due_mileage %}—{% endif %}</td>
         <td>{% if r.status == 'Overdue' %}<span class="badge badge-overdue">Overdue</span>{% elif r.status == 'Due soon' %}<span class="badge badge-soon">Due soon</span>{% elif r.status %}<span class="badge">{{ r.status }}</span>{% endif %}</td>
         {% if user.can_edit %}
         <td class="row-actions">
@@ -127,7 +127,7 @@
   <table class="table">
     <thead><tr><th>Date</th><th>Vendor</th><th>Gallons</th><th>Cost</th><th>Mileage</th><th>Source</th></tr></thead>
     <tbody>{% for f in fuel %}
-      <tr><td>{{ day(f.fuel_date) }}</td><td>{{ f.vendor or '—' }}</td><td>{{ f.gallons or '—' }}</td>
+      <tr><td>{{ day(f.fuel_date) }}</td><td>{{ f.vendor or '—' }}</td><td>{{ '{:,.2f}'.format(f.gallons) if f.gallons else '—' }}</td>
           <td>{{ money(f.total_cost) }}</td><td>{{ '{:,}'.format(f.mileage) if f.mileage else '—' }}</td><td class="muted">{{ f.source }}</td></tr>
     {% endfor %}</tbody>
   </table>

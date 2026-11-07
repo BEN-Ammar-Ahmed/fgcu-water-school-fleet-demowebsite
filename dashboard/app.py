@@ -203,19 +203,32 @@ app.jinja_env.globals['display_name'] = display_name
 app.jinja_env.globals['change_text'] = __import__('changes').text
 
 MAINT_SQL = """
-SELECT r.*, v.vehicle_type, v.make, v.model, v.year, v.notes, v.location,
+SELECT r.*, v.vehicle_type, v.make, v.model, v.year, v.notes, v.location, v.current_mileage,
        (r.last_completed_date + make_interval(months => r.time_interval_months))::date AS due_date
 FROM wsb.maintenance_rule r JOIN wsb.vehicle v USING (vehicle_id)
 WHERE r.enabled AND v.active {extra}
 """
 
 
+MILES_SOON = 500   # "Due soon" when this close to the mileage limit
+
+
 def maint_status(r):
-    if not r['due_date']:
-        return 'Unknown'
-    days = (r['due_date'] - datetime.date.today()).days
-    r['days'] = days
-    return 'Overdue' if days < 0 else 'Due soon' if days <= 30 else 'OK'
+    """Worst of the date check and the mileage check. Unknown only when neither can be worked out."""
+    found = []
+    if r.get('due_date'):
+        days = (r['due_date'] - datetime.date.today()).days
+        r['days'] = days
+        found.append('Overdue' if days < 0 else 'Due soon' if days <= 30 else 'OK')
+    if r.get('mileage_interval') and r.get('last_completed_mileage') is not None and r.get('current_mileage') is not None:
+        left = r['last_completed_mileage'] + r['mileage_interval'] - r['current_mileage']
+        r['miles_left'] = left
+        r['due_mileage'] = r['last_completed_mileage'] + r['mileage_interval']
+        found.append('Overdue' if left < 0 else 'Due soon' if left <= MILES_SOON else 'OK')
+    for s in ('Overdue', 'Due soon', 'OK'):
+        if s in found:
+            return s
+    return 'Unknown'
 
 
 def maintenance(extra='', args=()):

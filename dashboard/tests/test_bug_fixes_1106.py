@@ -39,3 +39,22 @@ def test_upload_to_missing_vehicle_is_404(client, sign_in):
 def test_rule_without_type_is_400(client, sign_in):
     sign_in(client, 'demo_tier1')
     assert client.post('/vehicles/1/rules', data={}).status_code == 400
+
+
+def test_mileage_rule_gets_a_status(app_module):
+    import datetime
+    r = {'due_date': None, 'mileage_interval': 7500, 'last_completed_mileage': 40000, 'current_mileage': 47400}
+    assert app_module.maint_status(r) == 'Due soon' and r['due_mileage'] == 47500
+    r = {'due_date': None, 'mileage_interval': 7500, 'last_completed_mileage': 40000, 'current_mileage': 48000}
+    assert app_module.maint_status(r) == 'Overdue'
+    r = {'due_date': datetime.date.today() + datetime.timedelta(days=200), 'mileage_interval': 7500,
+         'last_completed_mileage': 40000, 'current_mileage': 48000}
+    assert app_module.maint_status(r) == 'Overdue'     # the worse of the two checks wins
+    assert app_module.maint_status({'due_date': None, 'mileage_interval': 7500, 'last_completed_mileage': None,
+                                    'current_mileage': 1}) == 'Unknown'
+
+
+def test_no_none_in_maintenance_intervals(client, sign_in):
+    sign_in(client, 'demo_tier2')
+    html = client.get('/maintenance?show=all').get_data(as_text=True)
+    assert 'None mo' not in html and 'None' not in html.split('<main')[1]

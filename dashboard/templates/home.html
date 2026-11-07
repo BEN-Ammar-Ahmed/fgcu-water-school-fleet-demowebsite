@@ -103,7 +103,7 @@
         {% elif name == 'fuel' %}
           <a class="row" href="{{ url_for('vehicle', vid=r.vehicle_id) }}#fuel">
             <span class="row-main"><b>{{ r.vendor or 'Fuel' }}</b>
-              <span class="muted">· {{ r.fuel_date.strftime('%b %d, %Y') }} · {{ display_name(r) }}{% if r.gallons %} · {{ r.gallons }} gal{% endif %}</span></span>
+              <span class="muted">· {{ r.fuel_date.strftime('%b %d, %Y') }} · {{ display_name(r) }}{% if r.gallons %} · {{ '{:,.2f}'.format(r.gallons) }} gal{% endif %}</span></span>
             <span>{% if r.total_cost is not none %}${{ '%.2f'|format(r.total_cost) }}{% endif %}</span>
           </a>
         {% elif name == 'maintenance' %}
