@@ -2,7 +2,9 @@
 {% block title %}Sign in{% endblock %}
 {% block body %}
 <div class="login">
-  <h1>Water School Fleet</h1>
+  <img class="login-logo" src="{{ url_for('static', filename='logo.svg') }}" alt="" width="48" height="48">
+  <p class="muted small login-org">FGCU Water School</p>
+  <h1>Fleet</h1>
   <p class="muted">Sign in with your FGCU account.</p>
   <p><a class="btn btn-primary" href="{{ url_for('login_fgcu', next=next) }}">Sign in with FGCU</a></p>
 </div>

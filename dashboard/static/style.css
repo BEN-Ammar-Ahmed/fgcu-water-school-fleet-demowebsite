@@ -31,7 +31,11 @@ h2 { font-size: 15px; font-weight: 600; margin: 0 0 10px; }
 /* Top bar */
 .topbar { height: 56px; display: flex; align-items: center; gap: 16px; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; text-decoration: none; white-space: nowrap; }
-.logo { width: 26px; height: 26px; border-radius: 6px; background: var(--ink); color: var(--surface); font-size: 11px; font-weight: 700; display: grid; place-items: center; letter-spacing: .02em; }
+.logo { width: 28px; height: 28px; display: block; flex: none; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+.brand-text small { font-size: 10px; font-weight: 500; color: var(--ink2); letter-spacing: .06em; text-transform: uppercase; }
+.login-logo { display: block; margin: 0 auto 10px; }
+.login-org { text-align: center; margin: 0 0 2px; letter-spacing: .06em; text-transform: uppercase; }
 .topsearch { flex: 1; display: flex; justify-content: center; min-width: 0; }
 .topnav { display: flex; align-items: center; gap: 14px; white-space: nowrap; }
 .navlink { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--ink2); }

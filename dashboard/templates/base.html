@@ -4,12 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Fleet{% endblock %} · Water School Fleet</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <meta name="theme-color" content="#111111">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="{% block bodyclass %}{% endblock %}">
 {% if user %}
 <header class="topbar">
-  <a class="brand" href="{{ url_for('dashboard') }}"><span class="logo" aria-hidden="true">WS</span> Water School Fleet</a>
+  <a class="brand" href="{{ url_for('dashboard') }}"><img class="logo" src="{{ url_for('static', filename='logo.svg') }}" alt="" width="28" height="28">
+    <span class="brand-text"><small>FGCU Water School</small>Fleet</span></a>
   <div class="topsearch">{% block topsearch %}
     <form class="topsearch-form" action="{{ url_for('search_page') }}" method="get" role="search">
       {{ icon('search', 16) }}<input type="search" name="q" data-suggest="search" aria-label="Search the fleet" placeholder="Search the fleet  ( / )">
