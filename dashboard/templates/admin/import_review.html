@@ -1,0 +1,51 @@
+{% extends 'admin/layout.html' %}
+{% block title %}Review import{% endblock %}
+{% block admin %}
+<h1>Review and save</h1>
+<p class="muted">{{ filename }} · importing {{ t.label|lower }}. Fix anything wrong right in the table, or untick a row to skip it.
+  Nothing is saved until you click Save.</p>
+
+<ol class="steps" aria-label="Steps"><li class="done">Upload</li><li class="done">Match columns</li><li class="on">Review and save</li></ol>
+
+<p class="import-summary">
+  <span class="badge">{{ nkept }} of {{ rows|length }} rows ticked</span>
+  {% if bad %}<span class="badge badge-overdue" data-bad="{{ bad }}">{{ bad }} with problems</span>{% else %}<span class="badge badge-ok" data-bad="0">No problems</span>{% endif %}
+</p>
+
+<form method="post" action="{{ url_for('admin.import_review') }}" id="import-review"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="target" value="{{ target }}">
+  <input type="hidden" name="filename" value="{{ filename }}">
+  <input type="hidden" name="n" value="{{ rows|length }}">
+  <section class="card flush">
+  <div class="table-wrap">
+  <table class="table import-table">
+    <thead><tr><th>Save</th><th>#</th><th>Problems</th>{% for f in fields %}<th>{{ f.label }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for r in rows %}{% set i = loop.index0 %}
+      <tr class="{{ 'has-error' if r.errors and keep[i] }}">
+        <td><input type="checkbox" name="keep{{ i }}" {{ 'checked' if keep[i] }} aria-label="Save row {{ i + 1 }}"></td>
+        <td class="muted small">{{ i + 1 }}</td>
+        <td class="small problems">{% if not r.errors and not r.warnings %}<span class="muted">OK</span>{% endif %}{% for e in r.errors %}<div class="warn-red">{{ e }}</div>{% endfor %}
+          {% for w in r.warnings %}<div class="warn-amber">{{ w }}</div>{% endfor %}</td>
+        {% for f in fields %}
+        <td>{% if f.name in hidden and r.raw[f.name] %}<span class="mono small">{{ mask(r.raw[f.name]) }}</span>
+              <input type="hidden" name="c{{ i }}_{{ f.name }}" value="{{ r.raw[f.name] }}">
+            {% elif f.kind == 'bool' %}<select name="c{{ i }}_{{ f.name }}" aria-label="{{ f.label }}, row {{ i + 1 }}">
+              <option value="">No</option><option value="on" {{ 'selected' if r.raw[f.name] == 'on' }}>Yes</option></select>
+            {% else %}<input name="c{{ i }}_{{ f.name }}" value="{{ r.raw[f.name] }}" aria-label="{{ f.label }}, row {{ i + 1 }}"
+                  size="{{ 14 if f.kind in ('date', 'datetime') else 8 if f.kind in ('int', 'num') else 16 }}">{% endif %}</td>
+        {% endfor %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  </section>
+  <div class="actions">
+    <button class="btn" name="action" value="recheck">Check again</button>
+    <button class="btn btn-primary" name="action" value="save">Save {{ nkept }} row{{ 's' if nkept != 1 }}</button>
+    <a class="btn ghost" href="{{ url_for('admin.import_upload') }}">Cancel</a>
+  </div>
+  <p class="muted small">Dates: 2026-11-06 or 11/06/2026. Yes/No columns accept yes, y, x or true.</p>
+</form>
+{% endblock %}

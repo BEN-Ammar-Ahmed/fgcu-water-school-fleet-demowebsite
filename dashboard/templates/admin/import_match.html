@@ -1,0 +1,37 @@
+{% extends 'admin/layout.html' %}
+{% block title %}Match columns{% endblock %}
+{% block admin %}
+<h1>Match columns</h1>
+<p class="muted">{{ filename }} · {{ '{:,}'.format(nrows) }} row{{ 's' if nrows != 1 }} · importing {{ t.label|lower }}.
+  The site guessed which column holds what. Fix any wrong guess, then review the rows.</p>
+
+<ol class="steps" aria-label="Steps"><li class="done">Upload</li><li class="on">Match columns</li><li>Review and save</li></ol>
+
+<form method="post" action="{{ url_for('admin.import_review') }}" id="import-match"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="target" value="{{ target }}">
+  <input type="hidden" name="filename" value="{{ filename }}">
+  <input type="hidden" name="table" value="{{ table }}">
+  <section class="card flush">
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Field</th><th>Column in your file</th><th>First rows</th></tr></thead>
+    <tbody>
+    {% for f in fields %}
+      {% set col = mapping[f.name] %}
+      <tr>
+        <td><b>{{ f.label }}</b>{% if f.required %} <span class="muted small">required</span>{% endif %}</td>
+        <td><select name="map_{{ f.name }}" aria-label="Column for {{ f.label }}">
+              <option value="">(not in file)</option>
+              {% for h in headers %}<option value="{{ loop.index0 }}" {{ 'selected' if col == loop.index0 }}>{{ h }}</option>{% endfor %}
+            </select></td>
+        <td class="muted small">{% if col is not none %}{% for r in sample %}{{ mask(r[col]) if f.name in hidden else r[col] }}{{ ' · ' if not loop.last }}{% endfor %}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  </section>
+  <div class="actions"><button class="btn btn-primary">Review rows</button>
+    <a class="btn ghost" href="{{ url_for('admin.import_upload') }}">Start over</a></div>
+</form>
+{% endblock %}

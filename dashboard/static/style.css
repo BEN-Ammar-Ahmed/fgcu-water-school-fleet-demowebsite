@@ -271,3 +271,18 @@ a.stat:hover { border-color: var(--ink2); }
 .dash-row form { margin: 0; }
 .dash-row .detail { display: block; }
 @media (max-width: 800px) { .stat-grid.three { grid-template-columns: 1fr 1fr; } }
+
+/* Import a spreadsheet (templates/admin/import*.html) */
+.steps { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 4px 0 16px; counter-reset: step; font-size: 13px; }
+.steps li { counter-increment: step; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink2); background: var(--surface); }
+.steps li::before { content: counter(step) ". "; }
+.steps li.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.steps li.done { color: var(--ink); }
+.tips { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.table-wrap { overflow-x: auto; }
+.import-summary { display: flex; gap: 8px; flex-wrap: wrap; }
+.badge-ok { background: var(--soft); }
+.import-table td { vertical-align: top; }
+.import-table input:not([type=checkbox]), .import-table select { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); max-width: 220px; }
+.import-table tr.has-error td { background: var(--warn-red-bg); }
+.import-table td.problems { min-width: 220px; max-width: 280px; }

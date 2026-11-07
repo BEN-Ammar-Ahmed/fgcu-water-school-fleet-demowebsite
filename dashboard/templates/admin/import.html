@@ -1,0 +1,32 @@
+{% extends 'admin/layout.html' %}
+{% block title %}Import a spreadsheet{% endblock %}
+{% block admin %}
+<h1>Import a spreadsheet</h1>
+<p class="muted">Add many rows at once from an Excel (.xlsx) or CSV file. You'll match the columns and check every row
+  before anything is saved. The file itself is not kept.</p>
+
+<ol class="steps" aria-label="Steps"><li class="on">Upload</li><li>Match columns</li><li>Review and save</li></ol>
+
+<section class="card">
+  <form method="post" enctype="multipart/form-data" class="form-grid" id="import-upload"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>What's in the file?
+      <select name="target" required>
+        <option value="">Choose…</option>
+        {% for k, t in targets.items() %}<option value="{{ k }}" {{ 'selected' if target == k }}>{{ t.label }}</option>{% endfor %}
+      </select></label>
+    <label>File<input type="file" name="file" accept=".xlsx,.xlsm,.csv" required></label>
+    <div class="wide actions"><button class="btn btn-primary">Upload and match columns</button></div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Good to know</h2>
+  <ul class="muted small tips">
+    <li>The first row with column names is used as the header. A title row above it is skipped.</li>
+    <li>Only the first sheet of a workbook is read. Up to 2,000 rows at a time.</li>
+    <li>Fuel, maintenance and trips are matched to vehicles by property tag, so add vehicles first.</li>
+    <li>Photos and scans of licenses are never imported. Only the license number, state and expiry date.</li>
+    <li>Everything is saved together, or nothing is. The import is recorded in Activity.</li>
+  </ul>
+</section>
+{% endblock %}
