@@ -34,7 +34,7 @@
       <h2 class="pad">By vehicle</h2>
       {% if by_vehicle %}
       <div class="table-wrap"><table class="table">
-        <thead><tr><th>Vehicle</th><th class="num">Trips</th><th class="num">Miles</th><th>Last trip</th><th></th></tr></thead>
+        <thead><tr><th>Vehicle</th><th class="num">Trips</th><th class="num">Miles</th><th>Last trip</th><th><span class="sr">Share</span></th></tr></thead>
         <tbody>
         {% for r in by_vehicle %}
           <tr><td><a href="{{ url_for('vehicle', vid=r.vehicle_id) }}">{{ r.label }}</a><div class="muted tiny">{{ r.vehicle_type }}{% if r.asset_number %} · {{ r.asset_number }}{% endif %}</div></td>

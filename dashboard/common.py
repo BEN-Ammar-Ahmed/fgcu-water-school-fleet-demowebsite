@@ -34,7 +34,7 @@ def reserve_url():
 
 
 def static_url_for(app):
-    """url_for('static') plus ?v=<file's modified time>: browsers may keep the file for a month, and a new
+    """url_for('static') plus ?v=<file's modified time>: browsers may keep the file for a year, and a new
     version gets a new address, so changes still show up right away."""
     import os as _os
     from flask import url_for
@@ -45,7 +45,7 @@ def static_url_for(app):
         except OSError:
             v = 0
         return url_for('static', filename=filename, v=v)
-    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 30 * 24 * 3600
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 365 * 24 * 3600
     app.jinja_env.globals['asset'] = asset
 
 
@@ -207,3 +207,26 @@ class Database:
                 if on_error:
                     on_error()
         self._writer.submit(job)
+
+
+def compress_responses(app):
+    """gzip pages, CSS and JS (about 70% smaller) for browsers that accept it."""
+    import gzip
+    from flask import request
+
+    @app.after_request
+    def _gzip(resp):
+        if (resp.status_code != 200 or 'gzip' not in request.headers.get('Accept-Encoding', '')
+                or 'Content-Encoding' in resp.headers
+                or resp.mimetype not in ('text/html', 'text/css', 'application/javascript', 'text/javascript',
+                                         'application/json', 'image/svg+xml')):
+            return resp
+        resp.direct_passthrough = False
+        data = resp.get_data()
+        if len(data) < 1000:
+            return resp
+        resp.set_data(gzip.compress(data, 6))
+        resp.headers['Content-Encoding'] = 'gzip'
+        resp.headers['Content-Length'] = str(len(resp.get_data()))
+        resp.vary.add('Accept-Encoding')
+        return resp

@@ -35,7 +35,7 @@
 
 <section class="card flush">
 <table class="table">
-  <thead><tr><th>Person</th><th>Tier</th><th>Abilities</th><th>Status</th><th>Last active</th><th></th></tr></thead>
+  <thead><tr><th>Person</th><th>Tier</th><th>Abilities</th><th>Status</th><th>Last active</th><th><span class="sr">Actions</span></th></tr></thead>
   <tbody>
   {% for p in rows %}
     <tr class="{{ 'removed' if not p.active }}">

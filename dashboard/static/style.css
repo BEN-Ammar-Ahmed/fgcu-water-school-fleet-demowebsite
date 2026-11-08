@@ -212,7 +212,7 @@ h2.sub { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; colo
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); margin-right: 6px; }
 .dot.off { background: var(--line); }
 form.inline { display: inline; }
-tr.removed { opacity: .55; }
+tr.removed td { background: var(--soft); }
 .bar .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
 
 @media (max-width: 900px) {

@@ -14,7 +14,7 @@ from flask import (Flask, render_template, request, redirect, url_for, session,
 from werkzeug.utils import secure_filename
 
 from changes import diff as change_diff
-from common import VEHICLE_TYPES, Database, database_url, display_name, load_env_file, reserve_url, static_url_for
+from common import VEHICLE_TYPES, Database, database_url, display_name, load_env_file, reserve_url, static_url_for, compress_responses
 from forms import Field, parse
 from search import KINDS, run_search
 import passwords
@@ -158,6 +158,7 @@ def ensure_setup():
 
 app.jinja_env.globals['display_name'] = display_name
 static_url_for(app)
+compress_responses(app)
 
 
 # ---------------------------------------------------------------------------

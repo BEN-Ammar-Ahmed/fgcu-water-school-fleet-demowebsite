@@ -12,7 +12,7 @@
 <body class="{% block bodyclass %}{% endblock %}">
 {% if user %}
 <header class="topbar">
-  <a class="brand" href="{{ url_for('dashboard') }}"><img class="logo" src="{{ asset('logo.svg') }}" alt="" width="28" height="28">
+  <a class="brand" aria-label="FGCU Water School Fleet (home)" href="{{ url_for('dashboard') }}"><img class="logo" src="{{ asset('logo.svg') }}" alt="" width="28" height="28">
     <span class="brand-text"><small>FGCU Water School</small>Fleet</span></a>
   <div class="topsearch">{% block topsearch %}
     <form class="topsearch-form" action="{{ url_for('search_page') }}" method="get" role="search">
@@ -32,11 +32,11 @@
       </div>
     </details>
     {% endif %}
-    {% if user.can('approve') %}<a class="navlink" title="Reservations" aria-label="Reservations" href="{{ url_for('res.inbox') }}">{{ icon('calendar', 18) }}<span class="navtext"> Reservations</span>{% if reservations_waiting %} <span class="badge badge-soon" title="Requests waiting for a decision">{{ reservations_waiting }}</span>{% endif %}</a>{% endif %}
-    {% if user.is_admin %}<a class="navlink" title="Admin" aria-label="Admin" href="/admin">{{ icon('admin', 18) }}<span class="navtext"> Admin</span></a>{% endif %}
-    <a class="navlink" title="Help" aria-label="Help" href="{{ url_for('help_page') }}">{{ icon('help', 18) }}<span class="navtext"> Help</span></a>
+    {% if user.can('approve') %}<a class="navlink" title="Reservations" href="{{ url_for('res.inbox') }}">{{ icon('calendar', 18) }}<span class="navtext"> Reservations</span>{% if reservations_waiting %} <span class="badge badge-soon" title="Requests waiting for a decision">{{ reservations_waiting }}</span>{% endif %}</a>{% endif %}
+    {% if user.is_admin %}<a class="navlink" title="Admin" href="/admin">{{ icon('admin', 18) }}<span class="navtext"> Admin</span></a>{% endif %}
+    <a class="navlink" title="Help" href="{{ url_for('help_page') }}">{{ icon('help', 18) }}<span class="navtext"> Help</span></a>
     <details class="menu who-menu" id="me-menu">
-      <summary class="who" aria-label="Your account: {{ user.full_name }}"><span class="who-name">{{ user.full_name }}</span> <span class="badge">{{ user.tier_label }}</span> <span class="caret" aria-hidden="true">▾</span></summary>
+      <summary class="who"><span class="who-name">{{ user.full_name }}</span> <span class="badge">{{ user.tier_label }}</span> <span class="caret" aria-hidden="true">▾</span></summary>
       <div class="menu-list">
         <div class="menu-head"><b>{{ user.full_name }}</b><span class="muted tiny">{{ user.tier_label }}</span></div>
         <a href="{{ url_for('dashboard') }}">Dashboard</a>

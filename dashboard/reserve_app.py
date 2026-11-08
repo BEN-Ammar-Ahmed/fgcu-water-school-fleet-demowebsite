@@ -20,7 +20,7 @@ from flask import Flask, abort, flash, redirect, render_template, request, sessi
 from jinja2 import ChoiceLoader, FileSystemLoader
 
 import reservation_core as rc
-from common import VEHICLE_TYPES, Database, database_url, fleet_url, load_env_file, static_url_for
+from common import VEHICLE_TYPES, Database, database_url, fleet_url, load_env_file, static_url_for, compress_responses
 from forms import parse
 
 HERE = Path(__file__).parent
@@ -37,6 +37,7 @@ app.config.update(MAX_CONTENT_LENGTH=64 * 1024,
 app.config.setdefault('CSRF_ENABLED', True)
 app.add_template_filter(rc.when, 'when')
 static_url_for(app)
+compress_responses(app)
 
 PER_IP_PER_HOUR = 10       # new requests from one address
 PER_EMAIL_PER_DAY = 5      # new requests for one email address

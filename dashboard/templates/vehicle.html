@@ -56,7 +56,7 @@
   <h2 class="sub">Schedule</h2>
   {% if rules %}
   <table class="table">
-    <thead><tr><th>Service</th><th>Every</th><th>Last done</th><th>Next due</th><th>Status</th>{% if user.can('maintenance') or user.can_delete %}<th></th>{% endif %}</tr></thead>
+    <thead><tr><th>Service</th><th>Every</th><th>Last done</th><th>Next due</th><th>Status</th>{% if user.can('maintenance') or user.can_delete %}<th><span class="sr">Actions</span></th>{% endif %}</tr></thead>
     <tbody>
     {% for r in rules %}
       <tr>
@@ -151,7 +151,7 @@
   <h2>Documents</h2>
   {% if docs %}
   <table class="table">
-    <thead><tr><th>Type</th><th>File</th><th>Expires</th><th>Who can see</th><th></th></tr></thead>
+    <thead><tr><th>Type</th><th>File</th><th>Expires</th><th>Who can see</th><th><span class="sr">Actions</span></th></tr></thead>
     <tbody>
     {% for d in docs %}
       <tr>
