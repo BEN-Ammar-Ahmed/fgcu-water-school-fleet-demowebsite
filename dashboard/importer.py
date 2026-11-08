@@ -191,6 +191,7 @@ def check(q, user, target: str, records: list[dict]) -> list[dict]:
     fl = fields(target)
     tags = {r['asset_number'].lower() for r in q('SELECT asset_number FROM wsb.vehicle WHERE asset_number IS NOT NULL')}
     out, seen = [], set()
+    seen_unique = set()
     for rec in records:
         raw = {f.name: _normalise(f, rec.get(f.name, '')) for f in fl}
         if target == 'drivers' and not user.can_see_licenses:
@@ -227,6 +228,14 @@ def check(q, user, target: str, records: list[dict]) -> list[dict]:
         if key in seen:
             warnings.append('Same as an earlier row in this file.')
         seen.add(key)
+        # Must be unique: a second row with the same tag / email would make the whole save fail.
+        unique = (target == 'vehicles' and tag and ('tag', tag)) or \
+                 (target == 'drivers' and values.get('email') and ('email', values['email'].lower()))
+        if unique and unique in seen_unique:
+            errors.append(f"{'Property tag' if unique[0] == 'tag' else 'Email'} "
+                          f"{values.get('asset_number') or values.get('email')} is used twice in this file.")
+        if unique:
+            seen_unique.add(unique)
         out.append({'raw': raw, 'values': values, 'errors': errors, 'warnings': warnings})
     return out
 

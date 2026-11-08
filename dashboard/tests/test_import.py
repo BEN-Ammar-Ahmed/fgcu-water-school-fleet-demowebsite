@@ -153,6 +153,14 @@ def test_duplicates_are_flagged(client, sign_in, dbq):
     assert 'Looks like a duplicate' in html and 'Same as an earlier row' in html
 
 
+def test_same_tag_or_email_twice_in_one_file_is_an_error(client, sign_in):
+    sign_in(client, 'demo_tier1')
+    data = _xlsx([['Property Tag', 'Type', 'Make'], ['NEW-05', 'Car', 'Honda'], ['NEW-05', 'Car', 'Kia']])
+    assert 'NEW-05 is used twice in this file' in _review(client, 'vehicles', 'v.xlsx', data).get_data(as_text=True)
+    data = _csv([['First name', 'Last name', 'Email'], ['Ana', 'Lee', 'ana@x.edu'], ['Ana', 'Leigh', 'ANA@x.edu']])
+    assert 'ANA@x.edu is used twice in this file' in _review(client, 'drivers', 'd.csv', data).get_data(as_text=True)
+
+
 def test_vehicle_import_rejects_existing_tag(client, sign_in):
     sign_in(client, 'demo_tier1')
     data = _xlsx([['Property Tag', 'Type', 'Year', 'Make', 'Model'], ['DEMO-T01', 'Truck', 2020, 'Ford', 'F-150'],
