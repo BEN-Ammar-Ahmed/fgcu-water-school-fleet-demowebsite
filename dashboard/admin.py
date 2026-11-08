@@ -40,24 +40,20 @@ def admin_context():
 @bp.route('')
 def overview():
     """Layout B: four numbers, then the latest activity (left) and what needs attention + who's online (right)."""
-    q = core.q
-    online = q(f"""SELECT u.full_name, u.last_page, u.last_seen, r.role_name FROM wsb.app_user u
-                   JOIN wsb.app_role r USING (role_id)
-                   WHERE u.active AND u.last_seen > now() - interval '{ONLINE_MINUTES} minutes'
-                   ORDER BY u.last_seen DESC""")
+    import stats
+    args, fy = stats.home_args()
+    online, maint_rows, nums, recent = core.DATABASE.q_many([      # all at the same time
+        (f"""SELECT u.full_name, u.last_page, u.last_seen, r.role_name FROM wsb.app_user u
+             JOIN wsb.app_role r USING (role_id)
+             WHERE u.active AND u.last_seen > now() - interval '{ONLINE_MINUTES} minutes'
+             ORDER BY u.last_seen DESC""", ()),
+        (core.MAINT_SQL.format(extra=''), ()),
+        (stats.HOME_SQL, args),
+        ('SELECT * FROM wsb.activity_log ORDER BY activity_id DESC LIMIT 10', ())])
     for o in online:
         o['level'] = level_for_role(o['role_name'])
-    maint = core.maintenance()
-    nums = q("""SELECT (SELECT count(*) FROM wsb.vehicle WHERE status <> 'Retired') AS vehicles,
-                       (SELECT count(*) FROM wsb.trip WHERE start_datetime >= date_trunc('month', now())) AS trips,
-                       (SELECT COALESCE(sum(total_cost), 0) FROM wsb.fuel_record
-                         WHERE fuel_date >= date_trunc('month', now())::date) AS fuel,
-                       (SELECT COALESCE(sum(grand_total), 0) FROM wsb.v_cost_by_vehicle_fy
-                         WHERE fiscal_year = wsb.fiscal_year(CURRENT_DATE)) AS fy_total,
-                       wsb.fiscal_year(CURRENT_DATE) AS fy,
-                       (SELECT count(*) FROM wsb.vehicle_document
-                         WHERE expiration_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 60) AS expiring""", one=True)
-    recent = q('SELECT * FROM wsb.activity_log ORDER BY activity_id DESC LIMIT 10')
+    maint = core.maintenance(rows=maint_rows)
+    nums = dict(nums[0], fy=fy)
     g.page_label = 'Admin: Overview'
     return render_template('admin/overview.html', online=online, nums=nums, recent=recent,
                            overdue=sum(m['status'] == 'Overdue' for m in maint),
@@ -149,7 +145,7 @@ def add_person():
         errors.append('Enter a valid email address.')
     elif core.q('SELECT 1 FROM wsb.app_user WHERE lower(email) = lower(%s)', (form['email'],), one=True):
         errors.append('That email already has access (or is in the list with access removed).')
-    errors += [p.replace('The new password', 'The temporary password') for p in passwords.problems(temp, None)]
+    errors += [p.replace('The new password', 'The password') for p in passwords.problems(temp, None)]
     if errors:
         return _render_people(errors, form)
     role = core.q('SELECT role_id FROM wsb.app_role WHERE role_name = %s', (ROLE_FOR_LEVEL[form['level']],), one=True)
@@ -158,12 +154,12 @@ def add_person():
         uid = core.run("""INSERT INTO wsb.app_user (username, full_name, email, role_id, active)
                           VALUES (%s, %s, %s, %s, TRUE) RETURNING user_id""",
                        (username, form['full_name'][:100], form['email'][:100], role['role_id']))['user_id']
-        passwords.set_password(core.run, uid, temp, must_change=True)
+        passwords.set_password(core.run, uid, temp, must_change=False)
     except psycopg2.Error:
         return _render_people(['Could not add that person. Check the name and email.'], form)
     core.log_activity('access', f"Added {form['full_name']} ({form['email']}) as {LEVEL_LABELS[form['level']]}")
-    flash(f"{form['full_name']} can now sign in as {LEVEL_LABELS[form['level']]}. Give them their username "
-          f"({username}) and the temporary password; they choose their own the first time they sign in.", 'ok')
+    flash(f"{form['full_name']} can now sign in as {LEVEL_LABELS[form['level']]} with username {username} "
+          f"(or their email) and the password you set.", 'ok')
     return redirect(url_for('admin.people'))
 
 
@@ -214,16 +210,16 @@ def change_access(uid):
 
 @bp.route('/people/<int:uid>/password', methods=['POST'])
 def reset_password(uid):
-    """Give someone a temporary password (forgot it, or locked out). They must change it at next sign-in."""
+    """Set someone's password (forgot it, or locked out). It also unlocks the account."""
     _, t = _target(uid)
     temp = request.form.get('password') or ''
     problems = passwords.problems(temp, None)
     if problems:
-        flash(problems[0].replace('The new password', 'The temporary password'), 'error')
+        flash(problems[0].replace('The new password', 'The password'), 'error')
         return redirect(url_for('admin.people'))
-    passwords.set_password(core.run, uid, temp, must_change=True)
-    core.log_activity('access', f"Set a temporary password for {t['full_name']}")
-    flash(f"Saved. Give {t['full_name']} the temporary password; they choose their own when they sign in.", 'ok')
+    passwords.set_password(core.run, uid, temp, must_change=False)
+    core.log_activity('access', f"Set a new password for {t['full_name']}")
+    flash(f"Saved. Give {t['full_name']} the new password.", 'ok')
     return redirect(url_for('admin.people'))
 
 

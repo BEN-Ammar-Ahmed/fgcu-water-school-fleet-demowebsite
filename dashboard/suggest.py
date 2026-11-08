@@ -90,7 +90,8 @@ def _clean(rows):
             for r in rows]
 
 
-def suggest(q, user, field: str, text: str) -> dict:
+def suggest(q, user, field: str, text: str, q_many=None) -> dict:
+    """q_many([(sql, args), ...]) runs one query per source at the same time (each round trip costs ~0.1 s)."""
     text = ' '.join((text or '').split())[:100]
     empty = {'groups': [], 'did_you_mean': None}
     sources = _sources(user, field) if user else []
@@ -104,20 +105,28 @@ def suggest(q, user, field: str, text: str) -> dict:
     match = ' AND '.join(f"_t ILIKE %(w{i})s ESCAPE '\\'" for i in range(len(words)))
     schema = trgm_schema(q)
 
+    # One query per source: its normal matches (_close = 0) and, with pg_trgm, its close matches (_close = 1).
+    queries = []
+    for _, sql in sources:
+        one = f"""(SELECT *, 0 AS _close, 1.0::real AS _sim FROM ({sql}) s WHERE {match}
+                   ORDER BY CASE WHEN lower(_t) LIKE %(start)s ESCAPE '\\' THEN 0
+                                 WHEN lower(_t) LIKE %(word)s ESCAPE '\\' THEN 1 ELSE 2 END,
+                            _n DESC, label LIMIT {PER_GROUP})"""
+        if schema:
+            one += f""" UNION ALL
+                    (SELECT *, 1 AS _close, {schema}.word_similarity(%(text)s, lower(_t)) AS _sim FROM ({sql}) s
+                     WHERE NOT ({match}) AND {schema}.word_similarity(%(text)s, lower(_t)) >= {CLOSE}
+                     ORDER BY _sim DESC, _n DESC LIMIT 3)"""
+        queries.append((one, params))
+    results = (q_many or (lambda qs: [q(s, a) for s, a in qs]))(queries)
+
     groups, total, close = [], 0, []
-    for label, sql in sources:
-        rows = q(f"""SELECT * FROM ({sql}) s WHERE {match}
-                     ORDER BY CASE WHEN lower(_t) LIKE %(start)s ESCAPE '\\' THEN 0
-                                   WHEN lower(_t) LIKE %(word)s ESCAPE '\\' THEN 1 ELSE 2 END,
-                              _n DESC, label LIMIT {PER_GROUP}""", params)
-        rows = rows[:max(0, MAX_ITEMS - total)]
+    for (label, _), found in zip(sources, results):
+        rows = [r for r in found if not r['_close']][:max(0, MAX_ITEMS - total)]
         if rows:
             groups.append({'label': label, 'items': _clean(rows)})
             total += len(rows)
-        if schema and total < MAX_ITEMS:
-            close += q(f"""SELECT *, {schema}.word_similarity(%(text)s, lower(_t)) AS _sim FROM ({sql}) s
-                           WHERE NOT ({match}) AND {schema}.word_similarity(%(text)s, lower(_t)) >= {CLOSE}
-                           ORDER BY _sim DESC, _n DESC LIMIT 3""", params)
+        close += [r for r in found if r['_close']]
 
     if close and total < MAX_ITEMS:
         close.sort(key=lambda r: -r['_sim'])

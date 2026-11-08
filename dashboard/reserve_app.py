@@ -2,8 +2,9 @@
 
 Run:  python reserve_app.py      then open http://localhost:5001
 Uses the same database as the fleet site (DATABASE_URL in dashboard/.env). Requests land in the fleet site's
-Reservations inbox (reservations.py). No account is needed: each requester gets a private link (in their emails)
-to see, update or cancel their request. See docs/reservations.md.
+Reservations inbox (reservations.py). No account is needed:
+the requester gets a thank-you page and emails; anything after that (missing information, changes,
+cancelling) happens by email, and an approver updates the request on the fleet site. See docs/reservations.md.
 
 Shows only what a requester needs: vehicle names, types and locations. No VINs, plates, costs or driver data.
 """
@@ -15,12 +16,11 @@ import time
 from pathlib import Path
 
 import psycopg2
-import psycopg2.extras
-from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from jinja2 import ChoiceLoader, FileSystemLoader
 
 import reservation_core as rc
-from common import VEHICLE_TYPES, database_url, load_env_file
+from common import VEHICLE_TYPES, Database, database_url, fleet_url, load_env_file, static_url_for
 from forms import parse
 
 HERE = Path(__file__).parent
@@ -36,6 +36,7 @@ app.config.update(MAX_CONTENT_LENGTH=64 * 1024,
                   SESSION_COOKIE_SAMESITE='Lax', SESSION_COOKIE_HTTPONLY=True)
 app.config.setdefault('CSRF_ENABLED', True)
 app.add_template_filter(rc.when, 'when')
+static_url_for(app)
 
 PER_IP_PER_HOUR = 10       # new requests from one address
 PER_EMAIL_PER_DAY = 5      # new requests for one email address
@@ -46,37 +47,16 @@ TYPE_ICONS = {'Boat': 'boat', 'Car': 'car', 'Truck': 'truck', 'Trailer': 'traile
 # ---------------------------------------------------------------------------
 # Database, form protection, headers
 # ---------------------------------------------------------------------------
-def db():
-    if 'db' not in g:
-        g.db = psycopg2.connect(DB_URL, cursor_factory=psycopg2.extras.RealDictCursor, connect_timeout=10)
-    return g.db
-
-
-@app.teardown_appcontext
-def close_db(_):
-    conn = g.pop('db', None)
-    if conn is not None:
-        conn.close()
+DATABASE = Database(lambda: DB_URL, lambda: app.config.get('DB_POOL', True), maxconn=3)   # connections kept open
+app.teardown_appcontext(DATABASE.release)
 
 
 def q(sql, args=(), one=False):
-    with db().cursor() as cur:
-        cur.execute(sql, args)
-        rows = cur.fetchall() if cur.description else []
-    return (rows[0] if rows else None) if one else rows
+    return DATABASE.q(sql, args, one)
 
 
 def run(sql, args=()):
-    conn = db()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(sql, args)
-            row = cur.fetchone() if cur.description else None
-        conn.commit()
-        return row
-    except psycopg2.Error:
-        conn.rollback()
-        raise
+    return DATABASE.run(sql, args)
 
 
 def csrf_token():
@@ -85,7 +65,8 @@ def csrf_token():
     return session['_csrf']
 
 
-app.jinja_env.globals.update(csrf_token=csrf_token, type_icons=TYPE_ICONS)
+app.jinja_env.globals.update(csrf_token=csrf_token, type_icons=TYPE_ICONS, fleet_url=fleet_url,
+                              contact_email=os.environ.get('FLEET_CONTACT_EMAIL', ''), this_year=dt.date.today().year)
 
 
 @app.before_request
@@ -103,8 +84,7 @@ def headers(resp):
     resp.headers['Referrer-Policy'] = 'no-referrer'          # private links never leak to other sites
     resp.headers['X-Content-Type-Options'] = 'nosniff'
     resp.headers['X-Frame-Options'] = 'DENY'
-    if request.path.startswith('/r/'):
-        resp.headers['X-Robots-Tag'] = 'noindex'
+    if request.path == '/thanks':
         resp.headers['Cache-Control'] = 'no-store'
     return resp
 
@@ -180,12 +160,6 @@ def _form_page(title, fields, values, errors, cancel, submit_label, intro=None):
                            cancel=cancel, submit_label=submit_label, honeypot=True)
 
 
-def _by_token(token):
-    if len(token) > 64:
-        abort(404)
-    return rc.get(q, token=token) or abort(404)
-
-
 # ---------------------------------------------------------------------------
 # Pages
 # ---------------------------------------------------------------------------
@@ -239,9 +213,12 @@ def request_form():
             rc.notify(q, run, 'received', r)
             rc.notify(q, run, 'new', r)
             rc.send_now(q, run, app.logger)
-            flash('Request sent. We emailed you a copy with a private link to this page. '
-                  'You will get another email when it is approved or denied, or if more information is needed.', 'ok')
-            return redirect(url_for('status', token=a['token']))
+            # The thank-you page shows what they sent; it is kept in their own browser session only.
+            session['sent'] = {'id': rid, 'name': r['requester_name'], 'email': r['requester_email'],
+                               'vehicle': r['requested_label'] or f"Any {(r['vehicle_type'] or 'vehicle').lower()}",
+                               'pickup': rc.when(r['pickup_at']), 'return': rc.when(r['return_at']),
+                               'destination': r['destination']}
+            return redirect(url_for('thanks'))
     else:
         values = {'pickup_at': pick, 'return_at': ret,
                   'requested_vehicle_id': request.args.get('vehicle', ''),
@@ -252,72 +229,12 @@ def request_form():
                             'go back to see what is free then.')
 
 
-@app.route('/r/<token>')
-def status(token):
-    r = _by_token(token)
-    events = q('SELECT * FROM wsb.reservation_event WHERE reservation_id = %s ORDER BY at, event_id',
-               (r['reservation_id'],))
-    can_cancel = r['status'] in rc.OPEN or (r['status'] == 'Approved' and r['return_at'] > dt.datetime.now())
-    return render_template('status.html', r=r, events=events, open=rc.OPEN, can_cancel=can_cancel, token=token)
-
-
-@app.route('/r/<token>/edit', methods=['GET', 'POST'])
-def edit(token):
-    r = _by_token(token)
-    rid = r['reservation_id']
-    if r['status'] not in rc.OPEN:
-        flash(f"This request is {r['status'].lower()} and can't be changed. Send a new request instead.", 'error')
-        return redirect(url_for('status', token=token))
-    pick = _when_arg(request.form, 'pickup_at') if request.method == 'POST' else r['pickup_at']
-    ret = _when_arg(request.form, 'return_at') if request.method == 'POST' else r['return_at']
-    fields = rc.fields(_choices(pick, ret, exclude_rid=rid))
-    errors = []
-    if request.method == 'POST':
-        if request.form.get('website'):
-            abort(400)
-        values, errors = parse(fields, request.form)
-        drivers, more = rc.check(values, is_new=False)
-        errors += more
-        if values.get('requested_vehicle_id') and isinstance(pick, dt.datetime) and isinstance(ret, dt.datetime) \
-                and not rc.is_free(q, int(values['requested_vehicle_id']), pick, ret, rid):
-            errors.append('That vehicle is not free for those times. Choose another, or leave it on "Choose…".')
-        if not errors:
-            a = rc.row_args(values, drivers)
-            a['rid'] = rid
-            run("""UPDATE wsb.reservation SET requester_name = %(name)s, requester_email = %(email)s,
-                       uin = %(uin)s, phone = %(phone)s, destination = %(dest)s, purpose = %(purpose)s,
-                       vehicle_type = %(vtype)s, passengers = %(pass)s, pickup_at = %(pick)s,
-                       return_at = %(ret)s, drivers = %(drivers)s, notes = %(notes)s,
-                       requested_vehicle_id = %(rvid)s, status = 'Pending', updated_at = now()
-                   WHERE reservation_id = %(rid)s""", a)
-            rc.event(run, rid, a['name'], 'Updated',
-                     'Sent back for a decision.' if r['status'] == 'Needs info' else None)
-            rc.notify(q, run, 'updated', rc.get(q, rid))
-            rc.send_now(q, run, app.logger)
-            flash('Request updated. It is waiting for a decision again.', 'ok')
-            return redirect(url_for('status', token=token))
-    else:
-        values = dict(r, drivers=rc.drivers_text(r['drivers']), requested_vehicle_id=r['requested_vehicle_id'] or '')
-    intro = f"They asked: {r['decision_note']}" if r['status'] == 'Needs info' and r['decision_note'] else None
-    return _form_page(f'Update request #{rid}', fields, values, errors, url_for('status', token=token),
-                      'Send updated request', intro=intro)
-
-
-@app.route('/r/<token>/cancel', methods=['POST'])
-def cancel(token):
-    r = _by_token(token)
-    was = r['status']
-    if not (was in rc.OPEN or (was == 'Approved' and r['return_at'] > dt.datetime.now())):
-        flash(f"This request is {was.lower()} and can't be cancelled.", 'error')
-        return redirect(url_for('status', token=token))
-    run("UPDATE wsb.reservation SET status = 'Cancelled', updated_at = now() WHERE reservation_id = %s",
-        (r['reservation_id'],))
-    rc.event(run, r['reservation_id'], r['requester_name'], 'Cancelled')
-    if was == 'Approved':
-        rc.notify(q, run, 'cancelled', r)
-        rc.send_now(q, run, app.logger)
-    flash('Request cancelled.', 'ok')
-    return redirect(url_for('status', token=token))
+@app.route('/thanks')
+def thanks():
+    sent = session.get('sent')
+    if not sent:
+        return redirect(url_for('index'))
+    return render_template('thanks.html', sent=sent)
 
 
 if __name__ == '__main__':

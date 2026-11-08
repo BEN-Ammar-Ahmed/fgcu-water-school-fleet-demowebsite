@@ -125,6 +125,9 @@ def read_table(filename: str, data: bytes) -> tuple[list[str], list[list[str]]]:
         ws = wb.worksheets[0]
         grid = [[_cell(v) for v in row] for row in ws.iter_rows(values_only=True)]
         wb.close()
+    elif name.endswith(('.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.heic')):
+        raise ValueError("That's a document, not a spreadsheet. This page only reads Excel (.xlsx) or CSV files. "
+                         "To keep a PDF or a scan, open the vehicle's page and add it under Documents.")
     else:
         raise ValueError('Upload an Excel (.xlsx) or CSV file.')
     grid = [r for r in grid if any(c for c in r)]

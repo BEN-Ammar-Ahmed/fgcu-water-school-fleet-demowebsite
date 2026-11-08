@@ -14,7 +14,7 @@ from flask import (Flask, render_template, request, redirect, url_for, session,
 from werkzeug.utils import secure_filename
 
 from changes import diff as change_diff
-from common import VEHICLE_TYPES, database_url, display_name, load_env_file, reserve_url
+from common import VEHICLE_TYPES, Database, database_url, display_name, load_env_file, reserve_url, static_url_for
 from forms import Field, parse
 from search import KINDS, run_search
 import passwords
@@ -78,13 +78,11 @@ def safe_next(target):
     return target if not parts.scheme and not parts.netloc else None
 
 
-def start_session(user_id, must_change=False):
+def start_session(user_id):
     """The one place a sign-in turns into a session (a fresh one, so an old session id can't be reused)."""
     session.clear()
     g.pop('user', None)       # forget the 'signed out' answer cached earlier in this request
     session['user_id'] = user_id
-    if must_change:
-        session['must_change'] = True
 
 
 def _user_or_none():
@@ -104,37 +102,21 @@ def inject():
 # ---------------------------------------------------------------------------
 # Database helpers
 # ---------------------------------------------------------------------------
+# Connections are kept open and reused between pages (common.Database). Tests switch the pool off (DB_POOL).
+DATABASE = Database(lambda: DB_URL, lambda: app.config.get('DB_POOL', True), maxconn=6)
+app.teardown_appcontext(DATABASE.release)
+
+
 def db():
-    if 'db' not in g:
-        g.db = psycopg2.connect(DB_URL, cursor_factory=psycopg2.extras.RealDictCursor, connect_timeout=10)
-    return g.db
-
-
-@app.teardown_appcontext
-def close_db(_):
-    conn = g.pop('db', None)
-    if conn is not None:
-        conn.close()
+    return DATABASE.conn()
 
 
 def q(sql, args=(), one=False):
-    with db().cursor() as cur:
-        cur.execute(sql, args)
-        rows = cur.fetchall() if cur.description else []
-    return (rows[0] if rows else None) if one else rows
+    return DATABASE.q(sql, args, one)
 
 
 def run(sql, args=()):
-    conn = db()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(sql, args)
-            row = cur.fetchone() if cur.description else None
-        conn.commit()
-        return row
-    except psycopg2.Error:
-        conn.rollback()
-        raise
+    return DATABASE.run(sql, args)
 
 
 ACTIVITY_KINDS = ('sign-in', 'sign-out', 'view', 'change', 'download', 'access', 'reservation')
@@ -143,14 +125,12 @@ ACTIVITY_KINDS = ('sign-in', 'sign-out', 'view', 'change', 'download', 'access',
 def log_activity(kind, summary, user=None, path=None, details=None):
     """Append one line to wsb.activity_log. details: what an edit changed (changes.diff). Never breaks the page."""
     u = user or current_user()
-    try:
-        run("""INSERT INTO wsb.activity_log (user_id, username, full_name, kind, summary, path, details)
-               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (u.user_id if u else None, u.username if u else None, u.full_name if u else None,
-             kind, str(summary)[:2000], (path or request.full_path)[:300] if request else None,
-             psycopg2.extras.Json(details) if details else None))
-    except psycopg2.Error:
-        app.logger.exception('Could not write the activity log')
+    DATABASE.later("""INSERT INTO wsb.activity_log (user_id, username, full_name, kind, summary, path, details)
+                      VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                   (u.user_id if u else None, u.username if u else None, u.full_name if u else None,
+                    kind, str(summary)[:2000], (path or request.full_path)[:300] if request else None,
+                    psycopg2.extras.Json(details) if details else None),
+                   on_error=lambda: app.logger.exception('Could not write the activity log'))
 
 
 PAGE_LABELS = {'dashboard': 'Home', 'help_page': 'Help', 'maintenance_page': 'Maintenance list',
@@ -163,12 +143,11 @@ def remember_last_seen(response):
     u = g.get('user')
     if u and request.method == 'GET' and response.status_code == 200 and request.endpoint not in (None, 'static', 'suggest_json'):
         label = g.get('page_label') or PAGE_LABELS.get(request.endpoint) or request.path
-        try:
-            run("""UPDATE wsb.app_user SET last_seen = now(), last_page = %s
-                   WHERE user_id = %s AND (last_seen IS NULL OR last_seen < now() - interval '60 seconds'
-                                           OR last_page IS DISTINCT FROM %s)""", (label[:200], u.user_id, label[:200]))
-        except psycopg2.Error:
-            app.logger.exception('Could not update last_seen')
+        DATABASE.later("""UPDATE wsb.app_user SET last_seen = now(), last_page = %s
+                          WHERE user_id = %s AND (last_seen IS NULL OR last_seen < now() - interval '60 seconds'
+                                                  OR last_page IS DISTINCT FROM %s)""",
+                       (label[:200], u.user_id, label[:200]),
+                       on_error=lambda: app.logger.exception('Could not update last_seen'))
     return response
 
 
@@ -178,6 +157,7 @@ def ensure_setup():
 
 
 app.jinja_env.globals['display_name'] = display_name
+static_url_for(app)
 
 
 # ---------------------------------------------------------------------------
@@ -202,14 +182,6 @@ def check_csrf():
     if not session.get('_csrf') or not secrets.compare_digest(sent, session['_csrf']):
         return error_page(400, 'This page was open too long or came from somewhere else. '
                                'Go back, refresh the page, and try again.')
-    return None
-
-
-@app.before_request
-def temporary_password_first():
-    """Someone signed in with a temporary password must choose their own before doing anything else."""
-    if session.get('must_change') and request.endpoint not in ('change_password', 'logout', 'static'):
-        return redirect(url_for('change_password'))
     return None
 app.jinja_env.globals['change_text'] = __import__('changes').text
 
@@ -242,8 +214,10 @@ def maint_status(r):
     return 'Unknown'
 
 
-def maintenance(extra='', args=()):
-    rows = q(MAINT_SQL.format(extra=extra), args)
+def maintenance(extra='', args=(), rows=None):
+    """Maintenance schedules with their status. rows: already fetched with MAINT_SQL (saves a round trip)."""
+    if rows is None:
+        rows = q(MAINT_SQL.format(extra=extra), args)
     order = {'Overdue': 0, 'Due soon': 1, 'Unknown': 2, 'OK': 3}
     for r in rows:
         r['status'] = maint_status(r)
@@ -263,11 +237,8 @@ def login():
     if request.method == 'POST':
         row, error = passwords.check(q, run, username, request.form.get('password', ''))
         if row:
-            start_session(row['user_id'], row['must_change'])
+            start_session(row['user_id'])
             log_activity('sign-in', 'Signed in', user=current_user())
-            if row['must_change']:
-                flash('You signed in with a temporary password. Choose your own to continue.', 'ok')
-                return redirect(url_for('change_password'))
             return redirect(safe_next(nxt) or url_for('dashboard'))
         log_activity('sign-in', f'Failed sign-in for "{username}"', user=None)
     return render_template('login.html', next=nxt, error=error, username=username), (401 if error else 200)
@@ -277,7 +248,6 @@ def login():
 @require()
 def change_password():
     u = current_user()
-    forced = bool(session.get('must_change'))
     errors = []
     if request.method == 'POST':
         row, _ = passwords.check(q, run, u.username, request.form.get('current', ''))
@@ -286,11 +256,10 @@ def change_password():
         errors += passwords.problems(request.form.get('new', ''), request.form.get('confirm', ''), u.username)
         if not errors:
             passwords.set_password(run, u.user_id, request.form['new'], must_change=False)
-            session.pop('must_change', None)
             log_activity('access', 'Changed their own password')
             flash('Password changed.', 'ok')
             return redirect(url_for('dashboard'))
-    return render_template('change_password.html', errors=errors, forced=forced, min_length=passwords.MIN_LENGTH)
+    return render_template('change_password.html', errors=errors, min_length=passwords.MIN_LENGTH)
 
 
 @app.route('/logout')
@@ -313,26 +282,32 @@ def logout():
 @app.route('/')
 @require()
 def dashboard():
-    """Home page: the search, then a short dashboard. Editors get things to act on; viewers get what's available."""
+    """Home page: the search, then a short dashboard. Editors get things to act on; viewers get what's available.
+    All of it is fetched in one batch (the queries run at the same time)."""
+    import stats
     u = current_user()
-    ctx = _search_context('', 'all', {})
-    maint = maintenance()
-    dash = {'attention': [m for m in maint if m['status'] in ('Overdue', 'Due soon')][:8],
-            'out_now': q("""SELECT t.trip_id, t.vehicle_id, t.start_datetime, t.destination,
-                                   v.year, v.make, v.model, v.notes, v.name, v.asset_number,
-                                   d.first_name || ' ' || d.last_name AS driver_name
-                            FROM wsb.trip t JOIN wsb.vehicle v USING (vehicle_id) JOIN wsb.driver d USING (driver_id)
-                            WHERE t.end_datetime IS NULL ORDER BY t.start_datetime DESC LIMIT 8""")}
+    nums_args, fy = stats.home_args()
+    queries = [(MAINT_SQL.format(extra=''), ()),
+               ("""SELECT t.trip_id, t.vehicle_id, t.start_datetime, t.destination,
+                          v.year, v.make, v.model, v.notes, v.name, v.asset_number,
+                          d.first_name || ' ' || d.last_name AS driver_name
+                   FROM wsb.trip t JOIN wsb.vehicle v USING (vehicle_id) JOIN wsb.driver d USING (driver_id)
+                   WHERE t.end_datetime IS NULL ORDER BY t.start_datetime DESC LIMIT 8""", ()),
+               (stats.HOME_SQL, nums_args)]
     if u.can_edit:
-        dash['mine'] = q("""SELECT at, summary, details FROM wsb.activity_log
-                            WHERE user_id = %s AND kind IN ('change', 'access') ORDER BY activity_id DESC LIMIT 6""",
-                         (u.user_id,))
+        queries.append(("""SELECT at, summary, details FROM wsb.activity_log
+                           WHERE user_id = %s AND kind IN ('change', 'access') ORDER BY activity_id DESC LIMIT 6""",
+                        (u.user_id,)))
     else:
-        dash['available'] = q("""SELECT vehicle_id, vehicle_type, year, make, model, notes, name, asset_number, location
-                                 FROM wsb.vehicle WHERE active AND status = 'Available'
-                                 ORDER BY vehicle_type, year DESC NULLS LAST LIMIT 12""")
-        dash['available_total'] = q("SELECT count(*) n FROM wsb.vehicle WHERE active AND status = 'Available'",
-                                    one=True)['n']
+        queries.append(("""SELECT vehicle_id, vehicle_type, year, make, model, notes, name, asset_number, location
+                           FROM wsb.vehicle WHERE active AND status = 'Available'
+                           ORDER BY vehicle_type, year DESC NULLS LAST LIMIT 12""", ()))
+    maint_rows, out_now, nums, last = DATABASE.q_many(queries)
+    maint = maintenance(rows=maint_rows)
+    ctx = _search_context('', 'all', {}, maint)
+    dash = {'attention': [m for m in maint if m['status'] in ('Overdue', 'Due soon')][:8],
+            'out_now': out_now, 'nums': nums[0], 'fy': fy}
+    dash['mine' if u.can_edit else 'available'] = last
     return render_template('home.html', searched=False, dash=dash, **ctx)
 
 
@@ -365,10 +340,10 @@ def _search_filters():
     return {k: v for k, v in f.items() if v is not None}
 
 
-def _search_context(text, kind, filters):
+def _search_context(text, kind, filters, maint=None):
     u = current_user()
     kinds = [k for k in KINDS if (k != 'licenses' or u.can_see_licenses) and (k != 'drivers' or u.is_admin)]
-    maint = maintenance()
+    maint = maintenance() if maint is None else maint
     return dict(q=text, kind=kind, filters=filters, kinds=kinds, kind_labels=KIND_LABELS,
                 overdue=sum(m['status'] == 'Overdue' for m in maint),
                 soon=sum(m['status'] == 'Due soon' for m in maint))
@@ -386,17 +361,28 @@ def search_page():
     browse = request.args.get('browse') == '1' and kind != 'all'
     if not text and not filters and not browse:
         return redirect(url_for('dashboard'))
-    ctx = _search_context(text, kind, filters)
+    # The page's other lists go in the same batch as the search, so everything runs at the same time.
+    extra = [(MAINT_SQL.format(extra=''), ()),
+             ("SELECT vehicle_id, asset_number, year, make, model, notes, name FROM wsb.vehicle "
+              "ORDER BY vehicle_type, year DESC NULLS LAST", ()),
+             ("SELECT driver_id, first_name || ' ' || last_name AS name FROM wsb.driver ORDER BY last_name, first_name", ()),
+             ("SELECT DISTINCT location FROM wsb.vehicle WHERE location IS NOT NULL ORDER BY 1", ())]
+    got = {}
+
+    def together(queries):
+        res = DATABASE.q_many(extra + queries)
+        got['extra'] = res[:len(extra)]
+        return res[len(extra):]
+    results = run_search(q, u, text, kind, filters, browse=browse, q_many=together)
+    maint_rows, vehicles, drivers, locations = got.get('extra') or DATABASE.q_many(extra)
+    ctx = _search_context(text, kind, filters, maintenance(rows=maint_rows))
     ctx['browse'] = browse
-    ctx['results'] = run_search(q, u, text, kind, filters, browse=browse)
+    ctx['results'] = results
     pairs = lambda xs: [(x, x) for x in xs]
     ctx['opts'] = {
-        'vehicles': [(v['vehicle_id'], display_name(v)) for v in q(
-            "SELECT vehicle_id, asset_number, year, make, model, notes, name FROM wsb.vehicle ORDER BY vehicle_type, year DESC NULLS LAST")],
-        'drivers': [(d['driver_id'], d['name']) for d in q(
-            "SELECT driver_id, first_name || ' ' || last_name AS name FROM wsb.driver ORDER BY last_name, first_name")],
-        'locations': pairs(r['location'] for r in q(
-            "SELECT DISTINCT location FROM wsb.vehicle WHERE location IS NOT NULL ORDER BY 1")),
+        'vehicles': [(v['vehicle_id'], display_name(v)) for v in vehicles],
+        'drivers': [(d['driver_id'], d['name']) for d in drivers],
+        'locations': pairs(r['location'] for r in locations),
         'types': pairs(VEHICLE_TYPES), 'statuses': pairs(STATUSES), 'doc_types': pairs(DOC_TYPES),
     }
     confidential = kind == 'licenses' or bool(ctx['results'].get('licenses', {}).get('total'))
@@ -423,19 +409,26 @@ def vehicles():
 @app.route('/vehicles/<int:vid>')
 @require()
 def vehicle(vid):
-    v = q('SELECT * FROM wsb.vehicle WHERE vehicle_id = %s', (vid,), one=True) or abort(404)
     levels = doc_levels(current_user())
-    rules = maintenance('AND r.vehicle_id = %s', (vid,)) if v['active'] else         q('SELECT * FROM wsb.maintenance_rule WHERE vehicle_id = %s', (vid,))
-    records = q("""SELECT * FROM wsb.maintenance_record WHERE vehicle_id = %s
-                   ORDER BY service_date DESC, maintenance_id DESC LIMIT 50""", (vid,))
-    trips = q("""SELECT t.*, d.first_name || ' ' || d.last_name AS driver_name
-                 FROM wsb.trip t JOIN wsb.driver d USING (driver_id) WHERE t.vehicle_id = %s
-                 ORDER BY t.start_datetime DESC, t.trip_id DESC LIMIT 50""", (vid,))
-    fuel = q("""SELECT * FROM wsb.fuel_record WHERE vehicle_id = %s
-                ORDER BY fuel_date DESC, fuel_id DESC LIMIT 50""", (vid,))
-    costs = q("SELECT * FROM wsb.v_cost_by_vehicle_fy WHERE vehicle_id = %s ORDER BY fiscal_year DESC", (vid,))
-    docs = q("""SELECT * FROM wsb.vehicle_document WHERE vehicle_id = %s AND access_level = ANY(%s)
-                ORDER BY document_id DESC""", (vid, levels))
+    # Everything on the page in one batch: the queries run at the same time (see Database.q_many).
+    (v, sched, raw_rules, records, trips, fuel, costs, docs) = DATABASE.q_many([
+        ('SELECT * FROM wsb.vehicle WHERE vehicle_id = %s', (vid,)),
+        (MAINT_SQL.format(extra='AND r.vehicle_id = %s'), (vid,)),
+        ('SELECT * FROM wsb.maintenance_rule WHERE vehicle_id = %s', (vid,)),
+        ("""SELECT * FROM wsb.maintenance_record WHERE vehicle_id = %s
+            ORDER BY service_date DESC, maintenance_id DESC LIMIT 50""", (vid,)),
+        ("""SELECT t.*, d.first_name || ' ' || d.last_name AS driver_name
+            FROM wsb.trip t JOIN wsb.driver d USING (driver_id) WHERE t.vehicle_id = %s
+            ORDER BY t.start_datetime DESC, t.trip_id DESC LIMIT 50""", (vid,)),
+        ("""SELECT * FROM wsb.fuel_record WHERE vehicle_id = %s
+            ORDER BY fuel_date DESC, fuel_id DESC LIMIT 50""", (vid,)),
+        ('SELECT * FROM wsb.v_cost_by_vehicle_fy WHERE vehicle_id = %s ORDER BY fiscal_year DESC', (vid,)),
+        ("""SELECT * FROM wsb.vehicle_document WHERE vehicle_id = %s AND access_level = ANY(%s)
+            ORDER BY document_id DESC""", (vid, levels))])
+    if not v:
+        abort(404)
+    v = v[0]
+    rules = maintenance(rows=sched) if v['active'] else raw_rules
     g.page_label = f'Vehicle: {display_name(v)}'
     log_activity('view', g.page_label)
     return render_template('vehicle.html', v=v, rules=rules, records=records, trips=trips, fuel=fuel,
@@ -846,7 +839,8 @@ def doc_delete(did):
 def suggest_json():
     """Suggestions while typing. Not logged: it runs on every pause in typing."""
     from suggest import suggest
-    return jsonify(suggest(q, current_user(), request.args.get('field', ''), request.args.get('q', '')))
+    return jsonify(suggest(q, current_user(), request.args.get('field', ''), request.args.get('q', ''),
+                           q_many=DATABASE.q_many))
 
 
 @app.route('/roles')
@@ -910,6 +904,9 @@ app.register_blueprint(admin.bp)
 import import_views  # noqa: E402
 import_views.core = sys.modules[__name__]
 app.register_blueprint(import_views.imp)
+import stats  # noqa: E402
+stats.core = sys.modules[__name__]
+app.register_blueprint(stats.stats)
 import reservations  # noqa: E402
 reservations.core = sys.modules[__name__]
 app.register_blueprint(reservations.res)

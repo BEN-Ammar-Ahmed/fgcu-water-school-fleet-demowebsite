@@ -13,8 +13,8 @@
   <form method="post" action="{{ url_for('admin.add_person') }}" class="form-grid" id="add-person"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Full name<input name="full_name" value="{{ form.full_name or '' }}" required maxlength="100"></label>
     <label>FGCU email<input name="email" type="email" value="{{ form.email or '' }}" required maxlength="100" placeholder="name@fgcu.edu"></label>
-    <label>Temporary password<input name="password" type="text" autocomplete="off" required minlength="8" maxlength="200"
-      aria-describedby="temp-help"><span class="muted tiny" id="temp-help">At least 8 characters. They choose their own the first time they sign in.</span></label>
+    <label>Password<input name="password" type="text" autocomplete="off" required minlength="8" maxlength="200"
+      aria-describedby="temp-help"><span class="muted tiny" id="temp-help">At least 8 characters. Give it to them with their username. They can change it later from the menu under their name.</span></label>
     <label>Access level<select name="level">
       {% for l in assignable|reverse %}<option value="{{ l }}" {{ 'selected' if form.level == l }}>{{ level_labels[l] }}</option>{% endfor %}
     </select></label>
@@ -41,11 +41,11 @@
     <tr class="{{ 'removed' if not p.active }}">
       <td><b>{{ p.full_name }}</b><div class="muted small">{{ p.email or '' }}</div>
         <div class="muted tiny">Username: {{ p.username }} ·
-          {% if p.locked %}<b>locked (too many wrong passwords)</b>{% elif not p.has_password %}no password yet{% elif p.must_change %}temporary password{% else %}password set{% endif %}</div>
+          {% if p.locked %}<b>locked (too many wrong passwords)</b>{% elif not p.has_password %}no password yet{% else %}password set{% endif %}</div>
         {% if p.changeable and p.active %}
-        <details class="switches"><summary class="small">Set a temporary password</summary>
+        <details class="switches"><summary class="small">Set a new password</summary>
           <form method="post" action="{{ url_for('admin.reset_password', uid=p.user_id) }}" class="pw-reset"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input name="password" type="text" autocomplete="off" required minlength="8" aria-label="Temporary password for {{ p.full_name }}" placeholder="At least 8 characters">
+            <input name="password" type="text" autocomplete="off" required minlength="8" aria-label="New password for {{ p.full_name }}" placeholder="At least 8 characters">
             <button class="btn tiny">Save</button>
           </form>
         </details>

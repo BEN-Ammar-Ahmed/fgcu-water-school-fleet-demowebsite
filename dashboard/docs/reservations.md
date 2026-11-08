@@ -18,27 +18,32 @@ There are **two websites** on the same database:
  2. Picks one ("Request this one")
     or "Any boat is fine"
  3. Fills in their details         ──► Saved as Pending
-                                       Email to requester: "We got it"
-                                       (with their private link)
+ 4. Sees a thank-you page:             Email to requester: "Thank you,
+    "pending review"                   pending review" + what they sent
                                        Email to every approver ──────► Sees it in Reservations
                                                                        (number badge in the top bar)
                                                                        The vehicle they picked is
                                                                        pre-selected; can give another
                                                                    ──► Approve / Deny (reason) /
-                                                                       Ask for information (what)
+                                                                       Ask for information (what) /
+                                                                       Cancel
  Gets an email with the answer  ◄────  Status, history line,
  and everything they sent              Activity log line
- If "Needs info": opens the private
- link, updates the form            ──► Back to Pending, approvers emailed again
+ "Needs info": replies to the
+ email with the answer         ─────────────────────────────────────► Approver uses "Edit details"
+                                                                       with the answer, then approves
 ```
+
+There is no link back to the request for the requester: after the thank-you page everything happens by email.
+To change or cancel, they reply to the email; an approver makes the change on the fleet site.
 
 **Who can do what**
 
 | | Who |
 |---|---|
-| Request a vehicle | Anyone with the request site's link. Fleet site users get a "Request a vehicle" link in the top bar. |
-| See, update or cancel their request | The requester, through the private link in their emails (`/r/<secret>`). Update while Pending or Needs info; cancel until the return time. If an approved request is cancelled, approvers get an email. |
-| See all requests, approve, deny, ask for info | Tier 1, and anyone a top admin gives the "Approve reservations" switch (Admin -> People) |
+| Request a vehicle | Anyone with the request site's link. It's a separate site, so the fleet site doesn't link to it except from the Reservations inbox ("Open the request site"). |
+| Change or cancel a request | The requester asks by replying to an email; an approver makes the change |
+| See all requests, approve, deny, ask for info, edit details, cancel | Tier 1, and anyone a top admin gives the "Approve reservations" switch (Admin -> People) |
 
 **What the form asks:** name, email, UIN, phone, pick-up and return date and time, the vehicle (from the ones free
 then, or any), vehicle type, destination, purpose, passengers, other drivers (one per line: `name, email`), and notes.
@@ -50,8 +55,7 @@ part of that time. Pending requests don't block a vehicle; the approver decides.
 refuses them if someone tries anyway.
 
 **Spam protection:** a hidden field robots fill in, at most 10 new requests an hour from one address, and at most
-5 a day for one email address. The private links are long random secrets; pages behind them are not indexed by search
-engines and the link is never sent to other sites.
+5 a day for one email address.
 
 **Records kept:** every request keeps a history (who did what, when, and the message they wrote) and a copy of
 every email. Decisions also go in Admin -> Activity under "Reservations".
@@ -62,16 +66,19 @@ every email. Decisions also go in Admin -> Activity under "Reservations".
 |---|---|---|
 | Request site | Choose times, see free vehicles | `/` |
 | Request site | Your details | `/request` |
-| Request site | The requester's own page (private link) | `/r/<secret>`, `/r/<secret>/edit` |
+| Request site | Thank you (pending review) | `/thanks` |
 | Fleet site | Inbox (approvers) | `/reservations` (tabs: Pending, Needs info, Approved, Denied, Cancelled, All) |
-| Fleet site | One request | `/reservations/<number>` |
+| Fleet site | One request (approve, deny, ask, cancel) | `/reservations/<number>` |
+| Fleet site | Edit a request's details | `/reservations/<number>/edit` |
 
 Code: `reserve_app.py` + `reserve_templates/`, `reservations.py`, `reservation_core.py` (shared), `mailer.py`.
 Tables: `sql_postgres/13_reservations.sql`, `15_public_reservations.sql`.
 
 **Putting it online:** the request site runs on its own address (for example `reserve.<your-domain>`). Set
 `RESERVE_URL` and `FLEET_URL` in `.env` to the two real addresses so the links in emails point to the right place, and
-give the request site its own `RESERVE_SECRET_KEY`.
+give the request site its own `RESERVE_SECRET_KEY`. `FLEET_CONTACT_EMAIL` (optional) shows a "Questions?" address in the
+request site's footer, and `MAIL_REPLY_TO` (optional) is where replies to the emails go, for example the fleet's shared
+mailbox.
 
 ## Emails
 

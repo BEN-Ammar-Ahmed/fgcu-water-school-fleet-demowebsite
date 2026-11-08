@@ -174,10 +174,6 @@ def approver_emails(q):
         ORDER BY 1""")]
 
 
-def requester_link(r):
-    return f"{reserve_url()}/r/{r['public_token']}"
-
-
 def approver_link(r):
     return f"{fleet_url()}/reservations/{r['reservation_id']}"
 
@@ -204,30 +200,36 @@ def summary(r):
     return '\n'.join(lines)
 
 
+# Who gets each email: the requester, or every approver.
+TO_APPROVERS = ('new',)
+
+
 def email_for(kind, r):
-    """(subject, body). kind: received, new, updated, cancelled, or a decision status."""
+    """(subject, body). kind: received, new, cancelled, or a decision status (Approved, Denied, Needs info).
+    The requester has no link to come back to: everything after the request happens by email
+    (they reply to the email; MAIL_REPLY_TO, if set, is where replies go)."""
     n, name = r['reservation_id'], r['requester_name']
-    mine, inbox = requester_link(r), approver_link(r)
     note = (r.get('decision_note') or '').strip()
     facts = summary(r)
     if kind == 'received':
-        return (f'We got your vehicle request (#{n})',
-                f"Hi {name},\n\nWe received your vehicle request. You will get another email when it is approved "
-                f"or denied, or if we need more information.\n\n{facts}\n\n"
-                f"Your private link to see, update or cancel it: {mine}\n")
+        return (f'Thank you for your vehicle request (#{n})',
+                f"Hi {name},\n\nThank you for your vehicle request. It is pending review by the fleet managers.\n"
+                f"You will get an email when it is approved or denied, or if we need more information.\n\n"
+                f"Here is what you sent:\n\n{facts}\n\n"
+                f"Need to change or cancel something? Just reply to this email.\n")
     if kind == 'new':
         return (f'New vehicle request from {name} (#{n})',
-                f"{name} asked for a vehicle. Approve it, deny it, or ask for missing information here:\n{inbox}\n\n{facts}\n")
-    if kind == 'updated':
-        return (f'Vehicle request #{n} was updated',
-                f"{name} updated their vehicle request. It is waiting for a decision again:\n{inbox}\n\n{facts}\n")
+                f"{name} asked for a vehicle. Approve it, deny it, or ask for missing information here:\n"
+                f"{approver_link(r)}\n\n{facts}\n")
     if kind == 'cancelled':
-        return (f'Vehicle request #{n} was cancelled',
-                f"{name} cancelled their vehicle request. The vehicle is free again for that time.\n\n{facts}\n")
+        return (f'Your vehicle reservation was cancelled (#{n})',
+                f"Hi {name},\n\nYour vehicle reservation was cancelled." + (f"\n\nNote: {note}" if note else '')
+                + f"\n\n{facts}\n\nQuestions? Reply to this email. You can send a new request at any time: "
+                  f"{reserve_url()}\n")
     if kind == 'Approved':
         return (f'Your vehicle request is approved (#{n})',
-                f"Hi {name},\n\nYour vehicle request is approved." + (f"\n\nMessage: {note}" if note else '')
-                + f"\n\n{facts}\n\nYour private link: {mine}\n")
+                f"Hi {name},\n\nGood news: your vehicle request is approved." + (f"\n\nMessage: {note}" if note else '')
+                + f"\n\n{facts}\n\nNeed to change or cancel it? Reply to this email.\n")
     if kind == 'Denied':
         return (f'Your vehicle request was denied (#{n})',
                 f"Hi {name},\n\nSorry, your vehicle request was denied.\n\nReason: {note}\n\n{facts}\n\n"
@@ -235,13 +237,14 @@ def email_for(kind, r):
     if kind == 'Needs info':
         return (f'We need more information for your vehicle request (#{n})',
                 f"Hi {name},\n\nBefore we can approve your vehicle request, we need more information:\n\n{note}\n\n"
-                f"Update your request here: {mine}/edit\n\n{facts}\n")
+                f"Please reply to this email with the answer. We will update your request and let you know.\n\n"
+                f"{facts}\n")
     raise ValueError(kind)
 
 
 def notify(q, run, kind, r):
-    """Queue the emails for one step: to the requester, or to every approver."""
-    to = approver_emails(q) if kind in ('new', 'updated', 'cancelled') else [r['requester_email']]
+    """Queue the emails for one step: to every approver (a new request) or to the requester (everything else)."""
+    to = approver_emails(q) if kind in TO_APPROVERS else [r['requester_email']]
     for addr in to:
         mailer.queue(run, addr, *email_for(kind, r), reservation_id=r['reservation_id'])
 

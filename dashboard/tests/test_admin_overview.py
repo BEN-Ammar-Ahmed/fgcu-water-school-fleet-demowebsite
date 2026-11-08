@@ -23,7 +23,7 @@ def test_admin_link_only_for_admins(client, sign_in):
 def test_overview_cards_and_numbers(client, sign_in, dbq):
     sign_in(client, 'demo_tier1')
     page = client.get('/admin').get_data(as_text=True)
-    for label in ('Active vehicles', 'Trips this month', 'Fuel this month', 'Cost this fiscal year',
+    for label in ('Active vehicles', 'Trips this month', 'Fuel this month', 'Spent this fiscal year',
                   'Latest activity', 'Needs attention', 'Online now'):
         assert label in page, label
     assert 'data-stat="vehicles">8<' in page

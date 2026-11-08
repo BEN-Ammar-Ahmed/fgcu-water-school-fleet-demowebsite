@@ -6,10 +6,12 @@
   <p class="small"><a href="{{ url_for('res.inbox') }}">← Reservations</a></p>
   <div class="res-head">
     <h1>Request #{{ r.reservation_id }} {{ status_badge(r.status) }}</h1>
+    {% if can_decide %}<div class="actions"><a class="btn" href="{{ url_for('res.edit', rid=r.reservation_id) }}">{{ icon('edit', 16) }} Edit details</a></div>{% endif %}
   </div>
 
   {% if r.status == 'Needs info' %}
-    <div class="flash flash-error" role="status"><b>Waiting for the requester.</b> {{ r.decided_by }} asked: {{ r.decision_note }}</div>
+    <div class="flash flash-error" role="status"><b>Waiting for the requester's reply by email.</b> {{ r.decided_by }} asked: {{ r.decision_note }}
+      <br>When they reply, <a href="{{ url_for('res.edit', rid=r.reservation_id) }}">edit the details</a> with their answer, then approve or deny.</div>
   {% elif r.status == 'Approved' %}
     <div class="flash flash-ok" role="status"><b>Approved</b> by {{ r.decided_by }}: {{ r.vehicle_label or 'vehicle to be confirmed' }}.{% if r.decision_note %} {{ r.decision_note }}{% endif %}</div>
   {% elif r.status == 'Denied' %}
@@ -58,7 +60,18 @@
             <button class="btn btn-primary" name="action" value="approve">{{ icon('check', 16) }} Approve</button>
             <button class="btn" name="action" value="info">Ask for information</button>
             <button class="btn ghost" name="action" value="deny">Deny</button>
+            <button class="btn ghost" name="action" value="cancel" onclick="return confirm('Cancel this request? The requester gets an email.')">Cancel request</button>
           </div>
+        </form>
+      </div>
+      {% elif r.status == 'Approved' %}
+      <div class="card">
+        <h2>Cancel this reservation</h2>
+        <form method="post" action="{{ url_for('res.decide', rid=r.reservation_id) }}" class="form-grid decide"
+              onsubmit="return confirm('Cancel this reservation? The requester gets an email.')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label><span>Note to {{ r.requester_name }} (optional)</span><textarea name="note" rows="2" placeholder="For example: the boat needs a repair that week."></textarea></label>
+          <div class="actions"><button class="btn ghost" name="action" value="cancel">Cancel reservation</button></div>
         </form>
       </div>
       {% endif %}

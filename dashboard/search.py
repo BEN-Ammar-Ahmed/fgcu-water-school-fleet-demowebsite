@@ -135,8 +135,10 @@ def escape_like(text: str) -> str:
     return text.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
 
-def run_search(q, user, text: str, kind: str = 'all', filters: dict | None = None, browse: bool = False) -> dict[str, dict]:
-    """browse=True lists every row of one kind (no search text needed); not allowed for 'all'."""
+def run_search(q, user, text: str, kind: str = 'all', filters: dict | None = None, browse: bool = False,
+               q_many=None) -> dict[str, dict]:
+    """browse=True lists every row of one kind (no search text needed); not allowed for 'all'.
+    q_many([(sql, args), ...]) runs the groups' queries together (one round trip each, at the same time)."""
     text = (text or '').strip()
     filters = {k: v for k, v in (filters or {}).items() if v not in (None, '')}
     if browse and kind not in GROUPS:
@@ -157,7 +159,7 @@ def run_search(q, user, text: str, kind: str = 'all', filters: dict | None = Non
         params['date_to_end'] = (filters['date_to'] + dt.timedelta(days=1)
                                  if filters['date_to'] < dt.date.max else filters['date_to'])
 
-    out = {}
+    todo = []
     for name in names:
         spec = GROUPS[name]
         where = []
@@ -182,11 +184,15 @@ def run_search(q, user, text: str, kind: str = 'all', filters: dict | None = Non
             elif 'date_from' in filters or 'date_to' in filters:
                 continue
             cond = ' AND '.join(where) or 'TRUE'
-            base = f"SELECT * FROM ({spec['sql']}) s WHERE {cond}"
-            total = q(f'SELECT count(*) AS n FROM ({base}) c', params, one=True)['n']
-            rows = q(f"{base} ORDER BY {spec['order']} LIMIT {GROUP_LIMIT}", params)
-            for r in rows:
-                for k in ('_text', '_date', '_date2', '_vtype'):
-                    r.pop(k, None)
-            out[name] = {'rows': rows, 'total': total}
+            # count(*) OVER () gives the group's full total on every row, so one query gives rows and total.
+            todo.append((name, f"""SELECT *, count(*) OVER () AS _total FROM ({spec['sql']}) s WHERE {cond}
+                                  ORDER BY {spec['order']} LIMIT {GROUP_LIMIT}"""))
+    results = (q_many or (lambda qs: [q(s, a) for s, a in qs]))([(sql, params) for _, sql in todo])
+    out = {}
+    for (name, _), rows in zip(todo, results):
+        total = rows[0]['_total'] if rows else 0
+        for r in rows:
+            for k in ('_text', '_date', '_date2', '_vtype', '_total'):
+                r.pop(k, None)
+        out[name] = {'rows': rows, 'total': total}
     return out

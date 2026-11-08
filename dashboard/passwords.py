@@ -63,7 +63,7 @@ def problems(new, confirm, username=''):
 
 
 def set_password(run, user_id, password, must_change):
-    """Save a new password (hashed). must_change=True for a temporary one set by someone else."""
+    """Save a new password (hashed). must_change is kept for a possible "change it at first sign-in" rule (unused)."""
     run("""INSERT INTO wsb.app_user_password (user_id, password_hash, must_change)
            VALUES (%s, %s, %s)
            ON CONFLICT (user_id) DO UPDATE SET password_hash = EXCLUDED.password_hash,

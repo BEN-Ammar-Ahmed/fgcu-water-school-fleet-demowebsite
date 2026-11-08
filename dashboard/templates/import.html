@@ -6,6 +6,12 @@
 <p class="muted">Add many rows at once from an Excel (.xlsx) or CSV file. You'll match the columns and check every row
   before anything is saved. The file itself is not kept.</p>
 
+{% if last %}
+<div class="card import-done">
+  <b>Saved.</b> <a href="{{ url_for('search_page', kind=last, browse=1) }}">See the {{ targets[last].label|lower }} &rarr;</a>
+  <span class="muted small">or import another file below.</span>
+</div>
+{% endif %}
 <ol class="steps" aria-label="Steps"><li class="on">Upload</li><li>Match columns</li><li>Review and save</li></ol>
 
 <section class="card">
@@ -23,6 +29,7 @@
 <section class="card">
   <h2>Good to know</h2>
   <ul class="muted small tips">
+    <li>Spreadsheets only (.xlsx or .csv). PDFs and scans go on the vehicle's page, under Documents.</li>
     <li>The first row with column names is used as the header. A title row above it is skipped.</li>
     <li>Only the first sheet of a workbook is read. Up to 2,000 rows at a time.</li>
     <li>Fuel, maintenance and trips are matched to vehicles by property tag, so add vehicles first.</li>

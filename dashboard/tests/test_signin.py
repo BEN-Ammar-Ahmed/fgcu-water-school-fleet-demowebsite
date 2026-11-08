@@ -87,27 +87,24 @@ def test_change_own_password(client):
     assert _login(client, 'demo_tier2', 'brand-new-pass').status_code == 302
 
 
-def test_top_admin_adds_person_with_temporary_password(client, sign_in, dbq):
+def test_top_admin_adds_person_and_their_password_just_works(client, sign_in, dbq):
     sign_in(client, 'demo_tier1')
     client.post('/admin/people', data={'full_name': 'Nia Vale', 'email': 'nvale@fgcu.edu', 'level': 'viewer',
-                                       'password': 'temp-pass-42'})
-    row = dbq("""SELECT u.username, p.must_change FROM wsb.app_user u JOIN wsb.app_user_password p USING (user_id)
+                                       'password': 'given-pass-42'})
+    row = dbq("""SELECT u.username FROM wsb.app_user u JOIN wsb.app_user_password p USING (user_id)
                  WHERE u.email = 'nvale@fgcu.edu'""")[0]
-    assert row == {'username': 'nvale', 'must_change': True}
+    assert row == {'username': 'nvale'}
     other = client.application.test_client()
-    r = _login(other, 'nvale', 'temp-pass-42')
-    assert r.headers['Location'].endswith('/account/password')
-    assert other.get('/').headers['Location'].endswith('/account/password')      # must choose a password first
-    assert other.post('/account/password', data={'current': 'temp-pass-42', 'new': 'nias-own-pass',
-                                                 'confirm': 'nias-own-pass'}).status_code == 302
+    r = _login(other, 'nvale', 'given-pass-42')
+    assert r.status_code == 302 and r.headers['Location'].endswith('/')        # no forced password change
     assert other.get('/').status_code == 200
 
 
-def test_temporary_password_too_short_is_refused(client, sign_in, dbq):
+def test_password_too_short_is_refused(client, sign_in, dbq):
     sign_in(client, 'demo_tier1')
     r = client.post('/admin/people', data={'full_name': 'Kai Lane', 'email': 'klane@fgcu.edu', 'level': 'viewer',
                                            'password': 'short'})
-    assert 'The temporary password needs at least 8 characters.' in r.get_data(as_text=True)
+    assert 'The password needs at least 8 characters.' in r.get_data(as_text=True)
     assert not dbq("SELECT 1 FROM wsb.app_user WHERE email = 'klane@fgcu.edu'")
 
 
@@ -117,9 +114,9 @@ def test_top_admin_resets_a_password_and_unlocks(client, sign_in, dbq):
     sign_in(client, 'demo_tier1')
     client.post(f'/admin/people/{uid}/password', data={'password': 'reset-pass-77'})
     other = client.application.test_client()
-    assert _login(other, 'demo_tier2', 'reset-pass-77').headers['Location'].endswith('/account/password')
+    assert _login(other, 'demo_tier2', 'reset-pass-77').headers['Location'].endswith('/')
     log = dbq("SELECT summary FROM wsb.activity_log WHERE kind = 'access' ORDER BY activity_id DESC LIMIT 1")[0]
-    assert log['summary'] == 'Set a temporary password for Campus Staff'
+    assert log['summary'] == 'Set a new password for Campus Staff'
 
 
 def test_only_top_admin_resets_passwords(client, sign_in, dbq):
@@ -132,3 +129,12 @@ def test_tier2_cannot_edit(client, sign_in, dbq):
     sign_in(client, 'demo_tier2')
     vid = dbq("SELECT vehicle_id FROM wsb.vehicle WHERE asset_number = 'DEMO-T01'")[0]['vehicle_id']
     assert client.post(f'/vehicles/{vid}/edit', data={'vehicle_type': 'Car', 'status': 'Available'}).status_code == 403
+
+
+def test_name_menu_has_dashboard_change_password_and_sign_out(client, sign_in):
+    sign_in(client, 'demo_tier2')
+    page = client.get('/help').get_data(as_text=True)
+    menu = page[page.index('id="me-menu"'):page.index('</details>', page.index('id="me-menu"'))]
+    assert 'Dashboard' in menu and '/account/password' in menu and '/logout' in menu
+    nav = page[page.index('<nav class="topnav">'):page.index('</nav>')]
+    assert 'Request a vehicle' not in nav                      # the request site is separate

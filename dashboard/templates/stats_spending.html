@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% from '_stats.html' import money, num, bar, filters, tabs %}
+{% block title %}Spending {{ label }}{% endblock %}
+{% block body %}
+<div class="stats-page">
+  <div class="stats-head">
+    <h1>Spending <span class="muted">{{ label }}{% if vtype %} · {{ vtype }}s{% endif %}</span></h1>
+    {{ filters('stats.spending', fy, choices, vtype, types) }}
+  </div>
+  {{ tabs('spending') }}
+
+  <div class="stat-grid">
+    <div class="stat"><div class="n" data-stat="total">{{ money(t.total) }}</div><div class="l">Total</div><div class="s">{{ num(t.entries) }} entries · {{ t.vehicles }} vehicles</div></div>
+    <div class="stat"><div class="n" data-stat="fuel">{{ money(t.fuel) }}</div><div class="l">Fuel</div></div>
+    <div class="stat"><div class="n" data-stat="maintenance">{{ money(t.maintenance) }}</div><div class="l">Maintenance and repairs</div></div>
+    <div class="stat"><div class="n" data-stat="other">{{ money(t.other) }}</div><div class="l">Other (fees, registration, insurance)</div></div>
+  </div>
+
+  <section class="card">
+    <h2>By month</h2>
+    <div class="month-chart" role="img" aria-label="Spending per month">
+      {% for m in months %}
+      <div class="month" title="{{ m.month.strftime('%B %Y') }}: {{ money(m.total) }} (fuel {{ money(m.fuel) }}, maintenance {{ money(m.maintenance) }})">
+        <span class="month-val">{{ money(m.total) if m.total else '' }}</span>
+        <span class="month-bar"><span style="height: {{ m.pct }}%"></span></span>
+        <span class="month-lbl">{{ m.month.strftime('%b') }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="stats-cols">
+    <section class="card flush">
+      <h2 class="pad">By vehicle</h2>
+      {% if by_vehicle %}
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Vehicle</th><th class="num">Fuel</th><th class="num">Maintenance</th><th class="num">Other</th><th class="num">Total</th><th></th></tr></thead>
+        <tbody>
+        {% for r in by_vehicle %}
+          <tr><td>{% if r.vehicle_id %}<a href="{{ url_for('vehicle', vid=r.vehicle_id) }}">{{ r.label }}</a><div class="muted tiny">{{ r.vehicle_type }}{% if r.asset_number %} · {{ r.asset_number }}{% endif %}</div>{% else %}<span class="muted">Not linked to a vehicle</span>{% endif %}</td>
+              <td class="num">{{ money(r.fuel) }}</td><td class="num">{{ money(r.maintenance) }}</td><td class="num">{{ money(r.other) }}</td>
+              <td class="num"><b>{{ money(r.total) }}</b></td><td class="bar-cell">{{ bar(r.pct) }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}<p class="pad muted">No spending recorded for {{ label }}.</p>{% endif %}
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <h2>By vehicle type</h2>
+        {% for r in by_type %}
+          <div class="bar-row"><span>{{ r.vehicle_type }} <span class="muted tiny">{{ r.vehicles }} vehicles</span></span><b>{{ money(r.total) }}</b>{{ bar(r.pct) }}</div>
+        {% else %}<p class="muted">Nothing yet.</p>{% endfor %}
+      </section>
+      <section class="card">
+        <h2>Biggest expenses</h2>
+        {% for r in biggest %}
+          <div class="dash-row"><div>{% if r.vehicle_id %}<a href="{{ url_for('vehicle', vid=r.vehicle_id) }}">{{ r.label }}</a>{% else %}<span>Not linked to a vehicle</span>{% endif %}
+            <span class="muted small">{{ r.kind }}{% if r.vendor %} · {{ r.vendor }}{% endif %} · {{ r.d.strftime('%b %d, %Y') }}</span></div><b>{{ money(r.amount) }}</b></div>
+        {% else %}<p class="muted">Nothing yet.</p>{% endfor %}
+      </section>
+    </div>
+  </div>
+  <p class="muted small">Spending counts fuel purchases, service records, and invoice lines that aren't already linked to one of those, so nothing is counted twice. Fiscal years run July to June.</p>
+</div>
+{% endblock %}

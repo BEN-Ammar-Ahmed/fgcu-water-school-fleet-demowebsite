@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Thank you{% endblock %}
+{% block body %}
+<div class="thanks">
+  <div class="thanks-icon" aria-hidden="true">{{ icon('check', 28) }}</div>
+  <h1>Thank you, {{ sent.name.split(' ')[0] }}!</h1>
+  <p class="lead">Your request for <b>{{ sent.vehicle }}</b> is <span class="badge res-pending">Pending review</span></p>
+  <dl class="res-facts card">
+    <dt>Request number</dt><dd>#{{ sent.id }}</dd>
+    <dt>Pick up</dt><dd>{{ sent.pickup }}</dd>
+    <dt>Return</dt><dd>{{ sent.return }}</dd>
+    <dt>Destination</dt><dd>{{ sent.destination }}</dd>
+  </dl>
+  <p>We sent a copy to <b>{{ sent.email }}</b>. The fleet managers will email you when it's approved or denied,
+    or if they need more information. To change or cancel it, just reply to that email.</p>
+  <p class="muted small">Don't see the email? Check your spam or junk folder.</p>
+  <p><a class="btn" href="{{ url_for('index') }}">Make another request</a></p>
+</div>
+{% endblock %}

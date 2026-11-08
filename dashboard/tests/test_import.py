@@ -114,7 +114,9 @@ def test_fuel_import_flow_saves_after_review(client, sign_in, dbq):
     form = _review_form(html)
     form['action'] = 'save'
     r = client.post('/import/review', data=form)
-    assert r.status_code == 302
+    assert r.status_code == 302 and r.headers['Location'].endswith('/import?last=fuel')   # stays on the import page
+    page = client.get('/import?last=fuel').get_data(as_text=True)
+    assert 'Saved 2 rows.' in page and 'kind=fuel' in page and 'value="fuel" selected' in page
     assert dbq('SELECT count(*) n FROM wsb.fuel_record')[0]['n'] == before + 2
     assert dbq("SELECT total_cost FROM wsb.fuel_record WHERE vendor = 'Gas Stop' ORDER BY fuel_date LIMIT 1")[0]['total_cost'] == __import__('decimal').Decimal('80.10')
     log = dbq("SELECT summary FROM wsb.activity_log WHERE kind = 'change' ORDER BY activity_id DESC LIMIT 1")[0]
@@ -213,7 +215,10 @@ def test_trip_needs_an_approved_driver(client, sign_in):
 def test_upload_errors_are_messages(client, sign_in):
     sign_in(client, 'demo_tier1')
     r = _upload(client, 'fuel', 'scan.pdf', b'%PDF-1.4')
-    assert r.status_code == 200 and 'Upload an Excel' in r.get_data(as_text=True)
+    assert r.status_code == 200 and 'only reads Excel (.xlsx) or CSV' in r.get_data(as_text=True)
+    assert 'add it under Documents' in r.get_data(as_text=True)
+    r = _upload(client, 'fuel', 'notes.txt', b'hello')
+    assert 'Upload an Excel' in r.get_data(as_text=True)
     r = client.post('/import', data={'target': 'nope', 'file': (io.BytesIO(b'a,b'), 'x.csv')},
                     content_type='multipart/form-data')
     assert 'Choose what the file holds' in r.get_data(as_text=True)

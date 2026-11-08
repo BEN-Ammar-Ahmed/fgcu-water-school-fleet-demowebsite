@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% from '_stats.html' import money, num, bar, filters, tabs %}
+{% block title %}Trips {{ label }}{% endblock %}
+{% block body %}
+<div class="stats-page">
+  <div class="stats-head">
+    <h1>Trips <span class="muted">{{ label }}{% if vtype %} · {{ vtype }}s{% endif %}</span></h1>
+    {{ filters('stats.trips', fy, choices, vtype, types) }}
+  </div>
+  {{ tabs('trips') }}
+
+  <div class="stat-grid">
+    <div class="stat"><div class="n" data-stat="trips">{{ num(t.trips) }}</div><div class="l">Trips</div><div class="s">{{ t.open }} still out</div></div>
+    <div class="stat"><div class="n" data-stat="miles">{{ num(t.miles) }}</div><div class="l">Miles driven</div><div class="s">{{ num(t.avg_miles) }} mi per trip on average</div></div>
+    <div class="stat"><div class="n" data-stat="hours">{{ num(t.hours) }}</div><div class="l">Hours out</div></div>
+    <div class="stat"><div class="n" data-stat="vehicles">{{ t.vehicles }}</div><div class="l">Vehicles used</div><div class="s">by {{ t.drivers }} drivers</div></div>
+  </div>
+
+  <section class="card">
+    <h2>By month</h2>
+    <div class="month-chart" role="img" aria-label="Trips per month">
+      {% for m in months %}
+      <div class="month" title="{{ m.month.strftime('%B %Y') }}: {{ m.trips }} trips, {{ num(m.miles) }} miles">
+        <span class="month-val">{{ m.trips or '' }}</span>
+        <span class="month-bar"><span style="height: {{ m.pct }}%"></span></span>
+        <span class="month-lbl">{{ m.month.strftime('%b') }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="stats-cols">
+    <section class="card flush">
+      <h2 class="pad">By vehicle</h2>
+      {% if by_vehicle %}
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Vehicle</th><th class="num">Trips</th><th class="num">Miles</th><th>Last trip</th><th></th></tr></thead>
+        <tbody>
+        {% for r in by_vehicle %}
+          <tr><td><a href="{{ url_for('vehicle', vid=r.vehicle_id) }}">{{ r.label }}</a><div class="muted tiny">{{ r.vehicle_type }}{% if r.asset_number %} · {{ r.asset_number }}{% endif %}</div></td>
+              <td class="num"><b>{{ r.trips }}</b></td><td class="num">{{ num(r.miles) }}</td>
+              <td class="small">{{ r.last_trip.strftime('%b %d, %Y') }}</td><td class="bar-cell">{{ bar(r.pct) }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}<p class="pad muted">No trips recorded for {{ label }}.</p>{% endif %}
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <h2>Drivers</h2>
+        {% for r in by_driver %}
+          <div class="bar-row"><span>{{ r.name }} <span class="muted tiny">{{ num(r.miles) }} mi</span></span><b>{{ r.trips }}</b>{{ bar(r.pct) }}</div>
+        {% else %}<p class="muted">Nothing yet.</p>{% endfor %}
+      </section>
+      <section class="card">
+        <h2>Top destinations</h2>
+        {% for r in dests %}
+          <div class="bar-row"><span>{{ r.name }}</span><b>{{ r.trips }}</b>{{ bar(r.pct) }}</div>
+        {% else %}<p class="muted">Nothing yet.</p>{% endfor %}
+      </section>
+      <section class="card">
+        <h2>Top projects and purposes</h2>
+        {% for r in purposes %}
+          <div class="bar-row"><span>{{ r.name }}</span><b>{{ r.trips }}</b>{{ bar(r.pct) }}</div>
+        {% else %}<p class="muted">Nothing yet.</p>{% endfor %}
+      </section>
+    </div>
+  </div>
+
+  <section class="card flush">
+    <h2 class="pad">Latest trips</h2>
+    {% if recent %}
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>When</th><th>Vehicle</th><th>Driver</th><th>Where</th><th class="num">Miles</th></tr></thead>
+      <tbody>
+      {% for r in recent %}
+        <tr><td class="small">{{ r.start_datetime.strftime('%b %d, %Y %I:%M %p') }}{% if not r.end_datetime %} <span class="badge badge-soon">Out now</span>{% endif %}</td>
+            <td><a href="{{ url_for('vehicle', vid=r.vehicle_id) }}">{{ r.label }}</a></td><td>{{ r.driver_name }}</td>
+            <td>{{ r.destination or '' }}{% if r.purpose %}<div class="muted tiny">{{ r.purpose }}</div>{% endif %}</td>
+            <td class="num">{{ num(r.miles) if r.miles is not none else '' }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<p class="pad muted">No trips yet.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

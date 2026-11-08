@@ -1,0 +1,26 @@
+{# Shared bits for the stats pages. #}
+{% macro money(x) %}${{ '{:,.0f}'.format(x or 0) }}{% endmacro %}
+{% macro num(x) %}{{ '{:,.0f}'.format(x or 0) }}{% endmacro %}
+{% macro bar(pct) %}<span class="bar-track" aria-hidden="true"><span class="bar-fill" style="width: {{ pct }}%"></span></span>{% endmacro %}
+
+{% macro filters(endpoint, fy, choices, vtype, types) %}
+<form class="stats-filters" method="get" action="{{ url_for(endpoint) }}">
+  <label>Fiscal year
+    <select name="fy" onchange="this.form.submit()">
+      {% for y, l in choices %}<option value="{{ y }}" {{ 'selected' if y == fy }}>{{ l }}</option>{% endfor %}
+    </select></label>
+  <label>Vehicle type
+    <select name="type" onchange="this.form.submit()">
+      <option value="">All types</option>
+      {% for t in types %}<option value="{{ t }}" {{ 'selected' if t == vtype }}>{{ t }}</option>{% endfor %}
+    </select></label>
+  <noscript><button class="btn">Show</button></noscript>
+</form>
+{% endmacro %}
+
+{% macro tabs(active) %}
+<nav class="chips stats-tabs" aria-label="Stats">
+  <a class="chip {{ 'on' if active == 'spending' }}" href="{{ url_for('stats.spending', fy=request.args.get('fy'), type=request.args.get('type')) }}">Spending</a>
+  <a class="chip {{ 'on' if active == 'trips' }}" href="{{ url_for('stats.trips', fy=request.args.get('fy'), type=request.args.get('type')) }}">Trips</a>
+</nav>
+{% endmacro %}

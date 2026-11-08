@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Fleet{% endblock %} · Water School Fleet</title>
-  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ asset('logo.svg') }}">
   <meta name="theme-color" content="#111111">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta name="description" content="FGCU Water School fleet: vehicles, maintenance, trips, fuel and reservations.">
+  <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 <body class="{% block bodyclass %}{% endblock %}">
 {% if user %}
 <header class="topbar">
-  <a class="brand" href="{{ url_for('dashboard') }}"><img class="logo" src="{{ url_for('static', filename='logo.svg') }}" alt="" width="28" height="28">
+  <a class="brand" href="{{ url_for('dashboard') }}"><img class="logo" src="{{ asset('logo.svg') }}" alt="" width="28" height="28">
     <span class="brand-text"><small>FGCU Water School</small>Fleet</span></a>
   <div class="topsearch">{% block topsearch %}
     <form class="topsearch-form" action="{{ url_for('search_page') }}" method="get" role="search">
@@ -31,12 +32,19 @@
       </div>
     </details>
     {% endif %}
-    {% if user.can('approve') %}<a class="navlink" title="Reservations" href="{{ url_for('res.inbox') }}">{{ icon('calendar', 18) }}<span class="navtext"> Reservations</span>{% if reservations_waiting %} <span class="badge badge-soon" title="Requests waiting for a decision">{{ reservations_waiting }}</span>{% endif %}</a>
-    {% else %}<a class="navlink" title="Request a vehicle (opens the request site)" href="{{ reserve_site }}" target="_blank" rel="noopener">{{ icon('calendar', 18) }}<span class="navtext"> Request a vehicle</span></a>{% endif %}
-    {% if user.is_admin %}<a class="navlink" title="Admin" href="/admin">{{ icon('admin', 18) }}<span class="navtext"> Admin</span></a>{% endif %}
-    <a class="navlink" title="Help" href="{{ url_for('help_page') }}">{{ icon('help', 18) }}<span class="navtext"> Help</span></a>
-    <a class="who" href="{{ url_for('change_password') }}" title="Change password"><span class="who-name">{{ user.full_name }}</span> <span class="badge">{{ user.tier_label }}</span></a>
-    <a class="navlink" href="{{ url_for('logout') }}" title="Sign out">{{ icon('logout', 18) }}<span class="sr">Sign out</span></a>
+    {% if user.can('approve') %}<a class="navlink" title="Reservations" aria-label="Reservations" href="{{ url_for('res.inbox') }}">{{ icon('calendar', 18) }}<span class="navtext"> Reservations</span>{% if reservations_waiting %} <span class="badge badge-soon" title="Requests waiting for a decision">{{ reservations_waiting }}</span>{% endif %}</a>{% endif %}
+    {% if user.is_admin %}<a class="navlink" title="Admin" aria-label="Admin" href="/admin">{{ icon('admin', 18) }}<span class="navtext"> Admin</span></a>{% endif %}
+    <a class="navlink" title="Help" aria-label="Help" href="{{ url_for('help_page') }}">{{ icon('help', 18) }}<span class="navtext"> Help</span></a>
+    <details class="menu who-menu" id="me-menu">
+      <summary class="who" aria-label="Your account: {{ user.full_name }}"><span class="who-name">{{ user.full_name }}</span> <span class="badge">{{ user.tier_label }}</span> <span class="caret" aria-hidden="true">▾</span></summary>
+      <div class="menu-list">
+        <div class="menu-head"><b>{{ user.full_name }}</b><span class="muted tiny">{{ user.tier_label }}</span></div>
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('stats.spending') }}">Spending and trips</a>
+        <a href="{{ url_for('change_password') }}">Change password</a>
+        <a href="{{ url_for('logout') }}">{{ icon('logout', 16) }} Sign out</a>
+      </div>
+    </details>
   </nav>
 </header>
 {% endif %}
@@ -46,7 +54,23 @@
   {% endfor %}
   {% block body %}{% endblock %}
 </main>
-{% block scripts %}<script src="{{ url_for('static', filename='search.js') }}"></script>{% endblock %}
-<script src="{{ url_for('static', filename='suggest.js') }}"></script>
+{% block scripts %}<script src="{{ asset('search.js') }}" defer></script>{% endblock %}
+<script src="{{ asset('suggest.js') }}" defer></script>
+<script>
+// Top-bar menus (Add, your name): open on hover with a mouse, on click anywhere; close when you click elsewhere.
+document.querySelectorAll('details.menu').forEach(function (m) {
+  var t;
+  if (matchMedia('(hover: hover)').matches) {
+    m.addEventListener('mouseenter', function () { clearTimeout(t); m.open = true; });
+    m.addEventListener('mouseleave', function () { t = setTimeout(function () { m.open = false; }, 250); });
+  }
+});
+document.addEventListener('click', function (e) {
+  document.querySelectorAll('details.menu[open]').forEach(function (m) { if (!m.contains(e.target)) m.open = false; });
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') document.querySelectorAll('details.menu[open]').forEach(function (m) { m.open = false; });
+});
+</script>
 </body>
 </html>

@@ -6,10 +6,10 @@
 <h1>Overview</h1>
 
 <div class="stat-grid">
-  <div class="stat"><div class="n" data-stat="vehicles">{{ nums.vehicles }}</div><div class="l">Active vehicles</div></div>
-  <div class="stat"><div class="n" data-stat="trips">{{ nums.trips }}</div><div class="l">Trips this month</div></div>
-  <div class="stat"><div class="n" data-stat="fuel">{{ money(nums.fuel) }}</div><div class="l">Fuel this month</div></div>
-  <div class="stat"><div class="n" data-stat="fy">{{ money(nums.fy_total) }}</div><div class="l">Cost this fiscal year</div><div class="s">{{ nums.fy }}</div></div>
+  <a class="stat" href="{{ url_for('search_page', kind='vehicles', browse=1) }}"><div class="n" data-stat="vehicles">{{ nums.vehicles }}</div><div class="l">Active vehicles</div><div class="s">{{ nums.available }} available now</div></a>
+  <a class="stat" href="{{ url_for('stats.trips') }}"><div class="n" data-stat="trips">{{ nums.trips_month }}</div><div class="l">Trips this month</div><div class="s">{{ '{:,.0f}'.format(nums.miles_month or 0) }} miles &rarr;</div></a>
+  <a class="stat" href="{{ url_for('stats.spending') }}"><div class="n" data-stat="fuel">{{ money(nums.fuel_month) }}</div><div class="l">Fuel this month</div></a>
+  <a class="stat" href="{{ url_for('stats.spending') }}"><div class="n" data-stat="fy">{{ money(nums.spent_fy) }}</div><div class="l">Spent this fiscal year</div><div class="s">{{ nums.fy }} · see where it went &rarr;</div></a>
 </div>
 
 <div class="overview-cols">

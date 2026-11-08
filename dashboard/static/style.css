@@ -340,3 +340,67 @@ a.who { text-decoration: none; color: var(--ink); }
 .reserve-site .topbar { justify-content: flex-start; }
 @media (max-width: 900px) { .when-form { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 520px) { .when-form { grid-template-columns: 1fr; } }
+/* Stats pages (stats.py) and clickable numbers */
+.stat-grid.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+a.stat:hover { border-color: var(--ink); }
+.stats-page { max-width: 1200px; margin: 0 auto; }
+.stats-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.stats-head h1 .muted { font-weight: 400; }
+.stats-filters { display: flex; gap: 10px; flex-wrap: wrap; }
+.stats-filters label { display: grid; gap: 2px; font-size: 12px; color: var(--ink2); }
+.stats-filters select { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); }
+.stats-tabs { justify-content: flex-start; margin: 8px 0 4px; }
+.stats-cols { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.stats-cols > .card, .stats-cols .stack > .card { margin-bottom: 0; }
+.card .pad { padding: 18px 18px 0; }
+.card p.pad { padding-bottom: 18px; }
+.table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bar-cell { width: 90px; }
+.bar-track { display: block; height: 6px; background: var(--soft); border-radius: 3px; overflow: hidden; min-width: 60px; }
+.bar-fill { display: block; height: 100%; background: var(--ink); border-radius: 3px; }
+.bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 7px 0; border-top: 1px solid var(--soft); }
+.bar-row:first-of-type { border-top: 0; }
+.bar-row .bar-track { grid-column: 1 / -1; }
+.month-chart { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; align-items: end; height: 190px; }
+.month { display: grid; grid-template-rows: auto 1fr auto; height: 100%; text-align: center; gap: 4px; }
+.month-val { font-size: 11px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.month-bar { display: flex; align-items: flex-end; background: var(--soft); border-radius: 4px; overflow: hidden; }
+.month-bar span { display: block; width: 100%; background: var(--ink); min-height: 0; }
+.month-lbl { font-size: 12px; color: var(--ink2); }
+@media (max-width: 1000px) { .stat-grid.five { grid-template-columns: repeat(3, minmax(0, 1fr)); } .stats-cols { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .stat-grid.five { grid-template-columns: 1fr 1fr; } .month-val { display: none; } .month-chart { height: 140px; gap: 3px; } }
+/* Your name in the top bar: a menu that opens on hover or click */
+.who-menu summary.who { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px; }
+.who-menu summary.who:hover, .who-menu[open] summary.who { background: var(--soft); }
+.who-menu .caret { font-size: 11px; color: var(--ink2); }
+.who-menu .menu-list { min-width: 210px; z-index: 30; }
+.who-menu .menu-list a { display: flex; align-items: center; gap: 8px; }
+.menu-head { display: grid; padding: 8px 10px 10px; border-bottom: 1px solid var(--soft); margin-bottom: 4px; }
+.menu[open]::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 8px; }   /* keeps hover across the gap */
+/* Admin on narrow windows: the side menu becomes a row of tabs above the page (it used to float over the content) */
+.admin-main, .overview-cols > *, .stats-cols > * { min-width: 0; }
+@media (max-width: 900px) {
+  .admin-side { position: static; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 6px;
+                padding-bottom: 10px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+  .admin-side h4 { display: none; }
+  .admin-side a { white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: var(--surface); }
+  .admin-layout { gap: 12px; }
+  .overview-cols { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .stat .n { font-size: 22px; }
+  .page { padding-left: 16px; padding-right: 16px; }
+}
+/* Request site: thank-you page and footer */
+.reserve-site { display: flex; flex-direction: column; min-height: 100vh; }
+.reserve-site main.page { flex: 1; width: 100%; }
+.thanks { max-width: 560px; margin: 6vh auto 0; text-align: center; }
+.thanks .thanks-icon { width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 50%; background: var(--ink); color: var(--surface); display: grid; place-items: center; }
+.thanks .lead { font-size: 17px; }
+.thanks .res-facts { text-align: left; margin: 18px 0; }
+.site-footer { border-top: 1px solid var(--line); background: var(--surface); margin-top: 40px; }
+.footer-inner { max-width: 1240px; margin: 0 auto; padding: 20px 24px; display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: start; }
+.footer-links { display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+.footer-inner > .tiny { grid-column: 1 / -1; }
+@media (max-width: 600px) { .footer-inner { grid-template-columns: 1fr; padding: 16px; } .footer-links { justify-content: flex-start; } }

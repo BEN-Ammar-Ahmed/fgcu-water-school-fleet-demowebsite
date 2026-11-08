@@ -26,7 +26,7 @@ def import_upload():
     import importer
     allowed = _allowed_targets()
     g.page_label = 'Import a spreadsheet'
-    target = request.form.get('target', '')
+    target = request.form.get('target', '') or request.args.get('last', '')
     if request.method == 'POST':
         f = request.files.get('file')
         if target not in importer.TARGETS:
@@ -46,7 +46,8 @@ def import_upload():
                                        nrows=len(rows), mapping=importer.guess_mapping(target, headers),
                                        filename=f.filename, table=json.dumps({'headers': headers, 'rows': rows}),
                                        hidden=importer.HIDDEN, mask=importer.mask)
-    return render_template('import.html', targets={k: t for k, t in importer.TARGETS.items() if k in allowed},
+    last = request.args.get('last') if request.args.get('last') in allowed else None
+    return render_template('import.html', targets={k: t for k, t in importer.TARGETS.items() if k in allowed}, last=last,
                            target=target)
 
 
@@ -96,7 +97,7 @@ def import_review():
             else:
                 core.log_activity('change', f"Imported {n} {importer.TARGETS[target]['label'].lower()} from {filename or 'a file'}")
                 flash(f"Saved {n} row{'s' if n != 1 else ''}.", 'ok')
-                return redirect(url_for('dashboard'))
+                return redirect(url_for('imp.import_upload', last=target))   # stay here for the next file
     return render_template('import_review.html', target=target, t=importer.TARGETS[target], fields=fl,
                            rows=checked, keep=keep, filename=filename, bad=bad, nkept=len(kept),
                            hidden=importer.HIDDEN, mask=importer.mask)

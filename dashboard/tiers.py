@@ -42,6 +42,7 @@ class CurrentUser:
     email: str | None
     level: str
     extras: frozenset = field(default_factory=frozenset)   # switches turned on for this person
+    waiting: int = 0      # vehicle requests waiting for a decision (top bar badge; loaded with the user, no extra query)
 
     @property
     def perms(self) -> frozenset:
@@ -113,7 +114,8 @@ def can_change(actor: CurrentUser, target_level: str) -> bool:
 
 
 _USER_SQL = """SELECT u.user_id, u.username, u.full_name, u.email, r.role_name,
-                      ARRAY(SELECT p.permission FROM wsb.app_user_permission p WHERE p.user_id = u.user_id) AS extras
+                      ARRAY(SELECT p.permission FROM wsb.app_user_permission p WHERE p.user_id = u.user_id) AS extras,
+                      (SELECT count(*) FROM wsb.reservation WHERE status = 'Pending') AS waiting
                FROM wsb.app_user u JOIN wsb.app_role r USING (role_id)
                WHERE u.active AND {where}"""
 
@@ -123,7 +125,7 @@ def _to_user(row) -> CurrentUser | None:
         return None
     return CurrentUser(user_id=row['user_id'], username=row['username'], full_name=row['full_name'],
                        email=row['email'], level=level_for_role(row['role_name']),
-                       extras=frozenset(row.get('extras') or ()))
+                       extras=frozenset(row.get('extras') or ()), waiting=row.get('waiting') or 0)
 
 
 def load_user(q, user_id: int) -> CurrentUser | None:

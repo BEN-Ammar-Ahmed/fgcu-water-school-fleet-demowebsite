@@ -2,7 +2,7 @@
 then send_waiting() delivers what is waiting, if SMTP is set up.
 
 Set these to switch real sending on (see docs/reservations.md):
-    SMTP_HOST, SMTP_PORT (default 587), SMTP_USER, SMTP_PASSWORD, MAIL_FROM
+    SMTP_HOST, SMTP_PORT (default 587), SMTP_USER, SMTP_PASSWORD, MAIL_FROM, MAIL_REPLY_TO (optional)
 Without SMTP_HOST every email just waits in the outbox, where approvers can read it on the reservation page.
 """
 import os
@@ -42,6 +42,8 @@ def send_waiting(q, run, limit=20):
             msg['From'] = os.environ.get('MAIL_FROM') or os.environ.get('SMTP_USER', '')
             msg['To'] = r['to_email']
             msg['Subject'] = r['subject']
+            if os.environ.get('MAIL_REPLY_TO'):          # where replies go, e.g. the fleet's shared mailbox
+                msg['Reply-To'] = os.environ['MAIL_REPLY_TO']
             msg.set_content(r['body'])
             try:
                 s.send_message(msg)

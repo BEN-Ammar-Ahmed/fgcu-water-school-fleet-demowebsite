@@ -88,6 +88,7 @@ def app_module(monkeypatch, tmp_path):
     monkeypatch.setattr(app_mod, 'UPLOADS', tmp_path)
     app_mod.app.config['TESTING'] = True
     app_mod.app.config['CSRF_ENABLED'] = False   # tests/test_csrf.py turns it back on
+    app_mod.app.config['DB_POOL'] = False        # each test gets a new database; tests/test_db_pool.py checks the pool
     return app_mod
 
 
@@ -126,5 +127,6 @@ def reserve(app_module, monkeypatch):
     monkeypatch.setattr(reserve_app, 'DB_URL', TEST_URL)
     reserve_app.app.config['TESTING'] = True
     reserve_app.app.config['CSRF_ENABLED'] = False
+    reserve_app.app.config['DB_POOL'] = False
     reserve_app._recent.clear()
     return reserve_app.app.test_client()

@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Request a vehicle{% endblock %} · FGCU Water School</title>
-  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ asset('logo.svg') }}">
   <meta name="theme-color" content="#111111">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta name="description" content="Request a vehicle from the FGCU Water School fleet.">
+  <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 <body class="reserve-site">
 <header class="topbar">
-  <a class="brand" href="{{ url_for('index') }}"><img class="logo" src="{{ url_for('static', filename='logo.svg') }}" alt="" width="28" height="28">
+  <a class="brand" href="{{ url_for('index') }}"><img class="logo" src="{{ asset('logo.svg') }}" alt="" width="28" height="28">
     <span class="brand-text"><small>FGCU Water School</small>Vehicle requests</span></a>
 </header>
 <main class="page">
@@ -19,5 +20,17 @@
   {% endfor %}
   {% block body %}{% endblock %}
 </main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div><b>FGCU Water School</b> · Vehicle requests
+      <div class="muted small">Requests are reviewed by the fleet managers. You'll get the answer by email.</div></div>
+    <div class="footer-links small">
+      {% if contact_email %}<a href="mailto:{{ contact_email }}">Questions? {{ contact_email }}</a>{% endif %}
+      <a href="{{ url_for('index') }}">New request</a>
+      <a href="{{ fleet_url() }}/login">Fleet staff sign in</a>
+    </div>
+    <div class="muted tiny">&copy; {{ this_year }} Florida Gulf Coast University · The Water School</div>
+  </div>
+</footer>
 </body>
 </html>

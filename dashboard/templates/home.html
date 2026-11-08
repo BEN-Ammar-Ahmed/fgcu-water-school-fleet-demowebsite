@@ -145,4 +145,4 @@
 {% endif %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ url_for('static', filename='search.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('search.js') }}" defer></script>{% endblock %}

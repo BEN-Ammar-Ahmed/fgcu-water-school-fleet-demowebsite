@@ -26,7 +26,8 @@ Also in `.env` (never in git):
 | `SECRET_KEY` | Fleet site sign-in cookie. Without it, everyone is signed out at every restart. |
 | `RESERVE_SECRET_KEY` | Same, for the request site. Use a different value. |
 | `FLEET_URL`, `RESERVE_URL` | The two sites' addresses, used in links and emails (default `http://localhost:5000` and `:5001`). |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Real email sending (see `docs/reservations.md`). Without them emails wait in the outbox. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_REPLY_TO` | Real email sending (see `docs/reservations.md`). Without them emails wait in the outbox. |
+| `FLEET_CONTACT_EMAIL` | Optional "Questions?" address in the request site's footer. |
 
 ## Database setup
 
@@ -40,9 +41,9 @@ Username (or email) and password. Passwords are stored only as hashes in `wsb.ap
 
 - **First top admin:** after running `14_passwords.sql`, nobody has a password. Set one from a terminal:
   `python set_password.py <username or email>` (typed hidden).
-- **Everyone else:** a top admin adds them in Admin -> People with a temporary password, or uses "Set a temporary
-  password" on their row. They must choose their own the first time they sign in.
-- **Changing your own password:** click your name in the top bar.
+- **Everyone else:** a top admin adds them in Admin -> People with a password and gives it to them, or uses
+  "Set a new password" on their row (this also unlocks a locked account).
+- **Changing your own password:** your name in the top bar -> Change password.
 
 Code: `passwords.py` (checks, lockout, hashing), the `login` and `change_password` routes in `app.py`.
 
@@ -67,13 +68,14 @@ Anyone with the link picks free vehicles and sends a request; it lands in the fl
 | `forms.py` | Field definitions and form checking for the add / edit forms |
 | `templates/` | Pages (`base.html` = top bar, `home.html` = search, `_icons.html` = SVG icons) |
 | `static/style.css`, `static/search.js` | Look, and the expanding search bar |
-| `admin.py` | Admin area: overview, people (tiers, switches, temporary passwords), activity, data |
+| `admin.py` | Admin area: overview, people (tiers, switches, passwords), activity, data |
 | `passwords.py`, `set_password.py` | Password checks, lockout and hashing; setting a password from a terminal |
 | `reservations.py` | Reservations inbox on the fleet site (approve, deny, ask for info) |
 | `reserve_app.py`, `reserve_templates/` | The separate vehicle request site |
 | `reservation_core.py`, `mailer.py` | Shared reservation logic; email outbox and sending |
 | `import_views.py`, `importer.py` | Import a spreadsheet |
-| `common.py` | Settings and small helpers both sites use |
+| `common.py` | Settings, small helpers and the database connections (kept open and reused) both sites use |
+| `stats.py` | Spending and trips pages (`/stats/spending`, `/stats/trips`) |
 
 Trips, fuel and services are saved through the database functions in `sql_postgres/05_procedures.sql`,
 so the database's own checks apply.
@@ -161,3 +163,15 @@ Loaded so far: 73 vehicles, 57 maintenance rules, the WEX code list and the acce
 - Runs on 127.0.0.1 only. Don't host it anywhere without FGCU IT approval.
 - Uploaded documents are saved in `dashboard/uploads/` on this computer (git-ignored).
 - Not built yet (Phase 2): spreadsheet upload, downloads, the sign-in alert pop-up, stats, the admin area.
+
+## Speed
+
+Every round trip to Supabase takes about 0.1 s, and opening a new connection about 1 s. So:
+
+- Connections are kept open and reused (`common.Database`; up to 6 for the fleet site, 3 for the request site).
+- A page's independent queries run at the same time on separate connections (`DATABASE.q_many`), e.g. the search
+  groups, the vehicle page sections, the home and admin numbers.
+- The Activity log and "last seen" are written in the background after the page is sent (`DATABASE.later`).
+- CSS and scripts are cached by the browser for a month; their address changes when the file changes (`asset()`).
+
+Tests switch the pool off (`DB_POOL = False`); `tests/test_db_pool.py` checks it.

@@ -2,13 +2,16 @@
 {% if dash %}
 {% macro when(t) %}{% set m = ((now - t).total_seconds() // 60)|int %}{{ 'just now' if m < 1 else m ~ ' min ago' if m < 60 else (m // 60) ~ ' hr ago' if m < 1440 else t.strftime('%b %d') }}{% endmacro %}
 <div class="home-dash">
-  <div class="stat-grid three">
-    <a class="stat" href="{{ url_for('maintenance_page') }}"><div class="n {{ 'warn-red' if overdue }}" data-stat="overdue">{{ overdue }}</div><div class="l">Maintenance overdue</div></a>
-    <a class="stat" href="{{ url_for('maintenance_page') }}"><div class="n {{ 'warn-amber' if soon }}" data-stat="soon">{{ soon }}</div><div class="l">Due soon</div></a>
+  {% set n = dash.nums %}
+  <div class="stat-grid five">
+    <a class="stat" href="{{ url_for('maintenance_page') }}"><div class="n {{ 'warn-red' if overdue }}" data-stat="overdue">{{ overdue }}</div><div class="l">Maintenance overdue</div><div class="s">{{ soon }} due soon</div></a>
+    <a class="stat" href="{{ url_for('stats.spending') }}"><div class="n" data-stat="spent">${{ '{:,.0f}'.format(n.spent_fy or 0) }}</div><div class="l">Spent this fiscal year</div><div class="s">{{ dash.fy }} · see where it went &rarr;</div></a>
+    <a class="stat" href="{{ url_for('stats.spending') }}"><div class="n" data-stat="fuel">${{ '{:,.0f}'.format(n.fuel_month or 0) }}</div><div class="l">Fuel this month</div></a>
+    <a class="stat" href="{{ url_for('stats.trips') }}"><div class="n" data-stat="trips">{{ n.trips_month }}</div><div class="l">Trips this month</div><div class="s">{{ '{:,.0f}'.format(n.miles_month or 0) }} miles &rarr;</div></a>
     {% if user.can_edit %}
-    <div class="stat"><div class="n" data-stat="out">{{ dash.out_now|length }}</div><div class="l">Out on a trip now</div></div>
+    <a class="stat" href="#out-now"><div class="n" data-stat="out">{{ n.out_now }}</div><div class="l">Out on a trip now</div><div class="s">{{ n.available }} vehicles available</div></a>
     {% else %}
-    <div class="stat"><div class="n" data-stat="available">{{ dash.available_total }}</div><div class="l">Vehicles available</div></div>
+    <a class="stat" href="{{ url_for('search_page', kind='vehicles', browse=1, status='Available') }}"><div class="n" data-stat="available">{{ n.available }}</div><div class="l">Vehicles available</div></a>
     {% endif %}
   </div>
 
