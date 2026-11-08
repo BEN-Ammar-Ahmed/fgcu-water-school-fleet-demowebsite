@@ -17,7 +17,7 @@
 </form>
 
 <section class="card flush">
-<table class="table">
+<div class="table-wrap"><table class="table">
   <thead><tr><th>When</th><th>Who</th><th>What</th><th>Details</th></tr></thead>
   <tbody>
   {% for a in rows %}
@@ -27,7 +27,7 @@
     <tr><td colspan="4" class="muted">Nothing recorded{{ ' for these filters' if kind or text or d0 or d1 }}.</td></tr>
   {% endfor %}
   </tbody>
-</table>
+</table></div>
 </section>
 
 <nav class="actions">

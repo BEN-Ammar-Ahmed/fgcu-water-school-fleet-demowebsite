@@ -20,7 +20,8 @@
     {% if user.can('vehicles') %}<a class="btn" href="{{ url_for('vehicle_edit', vid=v.vehicle_id) }}">{{ icon('edit', 16) }} Edit</a>{% endif %}
     {% if user.can_delete %}
     <form method="post" action="{{ url_for('vehicle_delete', vid=v.vehicle_id) }}"
-          onsubmit="return confirm('Delete this vehicle and all its maintenance rules and documents? This cannot be undone.')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          data-confirm="Delete this vehicle?" data-confirm-button="Delete vehicle"
+          data-confirm-body="{{ display_name(v) }}{% if v.asset_number %} ({{ v.asset_number }}){% endif %} will be removed for everyone, with its maintenance schedules and documents."><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn danger">{{ icon('trash', 16) }} Delete vehicle</button></form>
     {% endif %}
   </div>
@@ -55,7 +56,7 @@
     {{ add_link('/maintenance/new?vehicle_id=' ~ v.vehicle_id, 'Log service', 'maintenance') }}</div>
   <h2 class="sub">Schedule</h2>
   {% if rules %}
-  <table class="table">
+  <div class="table-wrap"><table class="table">
     <thead><tr><th>Service</th><th>Every</th><th>Last done</th><th>Next due</th><th>Status</th>{% if user.can('maintenance') or user.can_delete %}<th><span class="sr">Actions</span></th>{% endif %}</tr></thead>
     <tbody>
     {% for r in rules %}
@@ -71,7 +72,8 @@
             <input type="hidden" name="back" value="{{ request.path }}#maintenance">
             <button class="btn tiny">{{ icon('check', 14) }} Mark done</button></form>{% endif %}
           {% if user.can_delete %}
-          <form method="post" action="{{ url_for('rule_delete', rid=r.rule_id) }}" onsubmit="return confirm('Remove this rule?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <form method="post" action="{{ url_for('rule_delete', rid=r.rule_id) }}" data-confirm="Remove this schedule?" data-confirm-button="Remove schedule"
+                data-confirm-body="{{ r.maintenance_type }} on {{ display_name(v) }} will no longer be tracked."><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn tiny ghost">Remove</button></form>
           {% endif %}
         </td>
@@ -79,7 +81,7 @@
       </tr>
     {% endfor %}
     </tbody>
-  </table>
+  </table></div>
   {% else %}<p class="muted">No maintenance schedule for this vehicle.</p>{% endif %}
   {% if user.can('maintenance') and v.active %}
   <details class="add">
@@ -96,61 +98,61 @@
 
   <h2 class="sub">Service history</h2>
   {% if records %}
-  <table class="table">
+  <div class="table-wrap"><table class="table">
     <thead><tr><th>Date</th><th>Service</th><th>Vendor</th><th>Mileage</th><th>Cost</th><th>Next due</th></tr></thead>
     <tbody>{% for m in records %}
       <tr><td>{{ day(m.service_date) }}</td><td>{{ m.service_type or '—' }}{% if m.description %}<div class="muted small">{{ m.description }}</div>{% endif %}</td>
           <td>{{ m.vendor or '—' }}</td><td>{{ '{:,}'.format(m.mileage_at_service) if m.mileage_at_service else '—' }}</td>
           <td>{{ money(m.cost) }}</td><td>{{ day(m.next_service_date) if m.next_service_date else '—' }}</td></tr>
     {% endfor %}</tbody>
-  </table>
+  </table></div>
   {% else %}<p class="muted">No service history yet.</p>{% endif %}
 </section>
 
 <section class="card section" id="trips">
   <div class="head"><h2>Trips</h2>{{ add_link('/trips/new?vehicle_id=' ~ v.vehicle_id, 'Log trip', 'trips_fuel') }}</div>
   {% if trips %}
-  <table class="table">
+  <div class="table-wrap"><table class="table">
     <thead><tr><th>Date</th><th>Destination</th><th>Driver</th><th>Purpose</th><th>Miles</th></tr></thead>
     <tbody>{% for t in trips %}
       <tr><td>{{ t.start_datetime.strftime('%b %d, %Y %H:%M') }}</td><td>{{ t.destination or '—' }}</td>
           <td>{{ t.driver_name }}</td><td>{{ t.purpose or '—' }}</td>
           <td>{% if t.ending_mileage and t.starting_mileage %}{{ t.ending_mileage - t.starting_mileage }}{% elif not t.end_datetime %}In progress{% else %}—{% endif %}</td></tr>
     {% endfor %}</tbody>
-  </table>
+  </table></div>
   {% else %}<p class="muted">No trips yet.</p>{% endif %}
 </section>
 
 <section class="card section" id="fuel">
   <div class="head"><h2>Fuel</h2>{{ add_link('/fuel/new?vehicle_id=' ~ v.vehicle_id, 'Log fuel', 'trips_fuel') }}</div>
   {% if fuel %}
-  <table class="table">
+  <div class="table-wrap"><table class="table">
     <thead><tr><th>Date</th><th>Vendor</th><th>Gallons</th><th>Cost</th><th>Mileage</th><th>Source</th></tr></thead>
     <tbody>{% for f in fuel %}
       <tr><td>{{ day(f.fuel_date) }}</td><td>{{ f.vendor or '—' }}</td><td>{{ '{:,.2f}'.format(f.gallons) if f.gallons else '—' }}</td>
           <td>{{ money(f.total_cost) }}</td><td>{{ '{:,}'.format(f.mileage) if f.mileage else '—' }}</td><td class="muted">{{ f.source }}</td></tr>
     {% endfor %}</tbody>
-  </table>
+  </table></div>
   {% else %}<p class="muted">No fuel records yet.</p>{% endif %}
 </section>
 
 <section class="card section" id="costs">
   <h2>Costs by fiscal year</h2>
   {% if costs %}
-  <table class="table">
+  <div class="table-wrap"><table class="table">
     <thead><tr><th>Fiscal year</th><th>Fuel</th><th>Maintenance</th><th>Other</th><th>Total</th></tr></thead>
     <tbody>{% for c in costs %}
       <tr><td>{{ c.fiscal_year }}</td><td>{{ money(c.fuel_total) }}</td><td>{{ money(c.maintenance_total) }}</td>
           <td>{{ money(c.other_total) }}</td><td><b>{{ money(c.grand_total) }}</b></td></tr>
     {% endfor %}</tbody>
-  </table>
+  </table></div>
   {% else %}<p class="muted">No invoices linked to this vehicle yet.</p>{% endif %}
 </section>
 
 <section class="card section" id="documents">
   <h2>Documents</h2>
   {% if docs %}
-  <table class="table">
+  <div class="table-wrap"><table class="table">
     <thead><tr><th>Type</th><th>File</th><th>Expires</th><th>Who can see</th><th><span class="sr">Actions</span></th></tr></thead>
     <tbody>
     {% for d in docs %}
@@ -162,7 +164,8 @@
         <td class="row-actions">
           <a class="btn tiny ghost" href="{{ url_for('doc_file', did=d.document_id, dl=1) }}">{{ icon('download', 14) }} Download</a>
           {% if user.can_delete %}
-          <form method="post" action="{{ url_for('doc_delete', did=d.document_id) }}" onsubmit="return confirm('Delete this document?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <form method="post" action="{{ url_for('doc_delete', did=d.document_id) }}" data-confirm="Delete this document?" data-confirm-button="Delete document"
+                data-confirm-body="{{ d.document_type }}{% if d.file_location %} ({{ d.file_location.split('/')[-1] }}){% endif %} on {{ display_name(v) }} will be removed for everyone."><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="back" value="{{ request.path }}#documents">
             <button class="btn tiny ghost">Delete</button></form>
           {% endif %}
@@ -170,7 +173,7 @@
       </tr>
     {% endfor %}
     </tbody>
-  </table>
+  </table></div>
   {% else %}<p class="muted">No documents you can see.</p>{% endif %}
 
   {% if user.can('documents') %}

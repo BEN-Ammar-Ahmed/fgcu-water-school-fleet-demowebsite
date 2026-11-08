@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
 {% block title %}Request a vehicle{% endblock %}
 {% block body %}
-<div class="res-page">
-  <h1>Request a vehicle</h1>
-  <p class="muted">Choose when you need it to see which vehicles are free. Then fill in your details. The fleet managers
-    approve or deny it, or ask for more information, and you get the answer by email.</p>
+<div class="res-page reserve-start">
+  <div class="reserve-intro">
+    <h1>Request a vehicle</h1>
+    <p class="muted">Pick your dates and times to see what's free. Then fill in your details. The fleet managers
+      approve or deny it, or ask for more information, and you get the answer by email.</p>
+  </div>
 
   <form method="get" action="{{ url_for('index') }}" class="card form-grid when-form">
     <label><span>Pick up</span><input type="datetime-local" name="pickup_at" value="{{ pickup }}" required></label>
@@ -13,7 +15,7 @@
       <select name="type"><option value="">Any type</option>
         {% for t in types %}<option value="{{ t }}" {{ 'selected' if t == vtype }}>{{ t }}</option>{% endfor %}
       </select></label>
-    <div class="actions"><button class="btn btn-primary">Show free vehicles</button></div>
+    <div class="actions"><button class="btn btn-primary">{{ icon('search', 16) }} Show free vehicles</button></div>
   </form>
 
   {% if problem %}<div class="flash flash-error" role="alert">{{ problem }}</div>{% endif %}

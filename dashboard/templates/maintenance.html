@@ -11,7 +11,7 @@
 <p class="muted small">Intervals are proposed (oil change 5,000 mi / 6 months, wipers 6 months, boat 100-hour service 12 months,
   trailer bearings 6 months). "Unknown" means the site can't work out when it's due: there is no last-done date, or no last-done mileage and current mileage.</p>
 <section class="card flush">
-<table class="list">
+<div class="table-wrap"><table class="list">
   <thead><tr><th>Vehicle</th><th>Service</th><th>Every</th><th>Last done</th><th>Next due</th>{% if user.can('maintenance') %}<th><span class="sr">Actions</span></th>{% endif %}</tr></thead>
   <tbody>
   {% for r in rows %}
@@ -32,6 +32,6 @@
     <tr><td colspan="6" class="muted">Nothing here.</td></tr>
   {% endfor %}
   </tbody>
-</table>
+</table></div>
 </section>
 {% endblock %}

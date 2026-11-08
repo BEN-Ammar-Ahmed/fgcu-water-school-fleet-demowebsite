@@ -5,7 +5,7 @@
 <p class="muted small">You only see documents your access tier is allowed to open.
   {% if user.can('documents') %}To upload, open a vehicle and use the upload box in its Documents section.{% endif %}</p>
 <section class="card flush">
-<table class="list">
+<div class="table-wrap"><table class="list">
   <thead><tr><th>Type</th><th>Vehicle</th><th>File</th><th>Expires</th><th>Who can see</th></tr></thead>
   <tbody>
   {% for d in rows %}
@@ -20,6 +20,6 @@
     <tr><td colspan="5" class="muted">No documents yet.</td></tr>
   {% endfor %}
   </tbody>
-</table>
+</table></div>
 </section>
 {% endblock %}

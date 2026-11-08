@@ -60,7 +60,8 @@
             <button class="btn btn-primary" name="action" value="approve">{{ icon('check', 16) }} Approve</button>
             <button class="btn" name="action" value="info">Ask for information</button>
             <button class="btn ghost" name="action" value="deny">Deny</button>
-            <button class="btn ghost" name="action" value="cancel" onclick="return confirm('Cancel this request? The requester gets an email.')">Cancel request</button>
+            <button class="btn ghost" name="action" value="cancel" data-confirm="Cancel this request?" data-confirm-button="Cancel request" data-confirm-note="none"
+                    data-confirm-body="{{ r.requester_name }} gets an email that it was cancelled.">Cancel request</button>
           </div>
         </form>
       </div>
@@ -68,7 +69,8 @@
       <div class="card">
         <h2>Cancel this reservation</h2>
         <form method="post" action="{{ url_for('res.decide', rid=r.reservation_id) }}" class="form-grid decide"
-              onsubmit="return confirm('Cancel this reservation? The requester gets an email.')">
+              data-confirm="Cancel this reservation?" data-confirm-button="Cancel reservation" data-confirm-note="none"
+              data-confirm-body="{{ r.requester_name }} gets an email, and {{ r.vehicle_label or 'the vehicle' }} is free again for that time.">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label><span>Note to {{ r.requester_name }} (optional)</span><textarea name="note" rows="2" placeholder="For example: the boat needs a repair that week."></textarea></label>
           <div class="actions"><button class="btn ghost" name="action" value="cancel">Cancel reservation</button></div>
