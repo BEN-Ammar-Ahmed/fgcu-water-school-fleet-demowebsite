@@ -8,6 +8,7 @@ import datetime as dt
 import io
 import re
 
+from common import display_name
 from forms import Field, parse
 
 MAX_ROWS = 2000
@@ -51,7 +52,7 @@ TARGETS = {
     'fuel': {
         'label': 'Fuel purchases',
         'fields': [
-            (Field('asset_number', 'Property tag', required=True), ['asset', 'assetnumber', 'propertytag', 'tag', 'vehicle', 'vehiclenumber', 'unit']),
+            (Field('asset_number', 'Vehicle (tag or name)', required=True), ['asset', 'assetnumber', 'assetno', 'propertytag', 'tag', 'vehicle', 'vehiclevessel', 'vessel', 'boat', 'vehiclename', 'unit', 'vehiclenumber']),
             (Field('fuel_date', 'Date', 'date', required=True), ['date', 'fueldate', 'transactiondate', 'purchasedate']),
             (Field('gallons', 'Gallons', 'num', required=True), ['gallons', 'gal', 'quantity', 'units', 'qty']),
             (Field('total_cost', 'Total cost', 'num', required=True), ['total', 'cost', 'amount', 'totalcost', 'grossamount', 'netamount', 'price']),
@@ -62,19 +63,22 @@ TARGETS = {
     'maintenance': {
         'label': 'Maintenance / repairs',
         'fields': [
-            (Field('asset_number', 'Property tag', required=True), ['asset', 'assetnumber', 'propertytag', 'tag', 'vehicle', 'unit']),
+            (Field('asset_number', 'Vehicle (tag or name)', required=True), ['asset', 'assetnumber', 'assetno', 'propertytag', 'tag', 'vehicle', 'vehiclevessel', 'vessel', 'boat', 'vehiclename', 'unit', 'vehiclenumber']),
             (Field('service_date', 'Date', 'date', required=True), ['date', 'servicedate', 'datein', 'repairdate']),
-            (Field('service_type', 'Service', required=True), ['service', 'servicetype', 'type', 'work', 'repair', 'job']),
-            (Field('cost', 'Cost', 'num'), ['cost', 'amount', 'total', 'price', 'invoiceamount']),
+            (Field('service_type', 'Service', required=True), ['service', 'servicetype', 'repairitems', 'repairs', 'items', 'type', 'work', 'repair', 'job']),
+            (Field('cost', 'Cost', 'num'), ['cost', 'totalcost', 'amount', 'total', 'price', 'invoiceamount']),
             (Field('vendor', 'Vendor'), ['vendor', 'shop', 'company', 'provider']),
             (Field('mileage_at_service', 'Mileage', 'int'), ['mileage', 'odometer', 'miles', 'hours']),
             (Field('description', 'What was done', 'textarea'), ['description', 'details', 'notes', 'workdone', 'comments']),
+            (Field('purchaser', 'Purchaser'), ['purchaser', 'purchasedby', 'buyer', 'cardholder']),
+            (Field('funding_source', 'Funding source / account'), ['fundingsource', 'fundingsurceaccount', 'fundingsourceaccount', 'funding', 'account', 'fund', 'costcenter']),
+            (Field('pcard_workday_no', 'P-Card Workday #'), ['pcardworkday', 'pcardworkdayno', 'pcard', 'workday', 'workdayno', 'pcardnumber']),
         ],
     },
     'trips': {
         'label': 'Trips',
         'fields': [
-            (Field('asset_number', 'Property tag', required=True), ['asset', 'assetnumber', 'propertytag', 'tag', 'vehicle', 'unit']),
+            (Field('asset_number', 'Vehicle (tag or name)', required=True), ['asset', 'assetnumber', 'assetno', 'propertytag', 'tag', 'vehicle', 'vehiclevessel', 'vessel', 'boat', 'vehiclename', 'unit', 'vehiclenumber']),
             (Field('driver_email', 'Driver email', required=True), ['driveremail', 'email', 'driver']),
             (Field('start_datetime', 'Start', 'datetime', required=True), ['start', 'date', 'startdate', 'departure', 'out', 'dateout']),
             (Field('end_datetime', 'End', 'datetime'), ['end', 'enddate', 'return', 'returned', 'datein']),
@@ -189,10 +193,49 @@ def _normalise(f, raw: str) -> str:
     return raw
 
 
+class VehicleFinder:
+    """Finds a vehicle from what a spreadsheet calls it: a property tag ('6896'), its Name ('Mako'), or
+    year make model ('2013 Ford F-150', 'Ford F150'). Spaces, dashes and case don't matter."""
+
+    def __init__(self, q):
+        self.rows = q('SELECT vehicle_id, asset_number, name, year, make, model, vehicle_type FROM wsb.vehicle')
+        self.by_tag, self.by_name = {}, {}
+        for v in self.rows:
+            v['label'] = display_name(v)
+            if v['asset_number']:
+                self.by_tag[_key(v['asset_number'])] = v
+            for n in {v['name'], v['label'], f"{v['make'] or ''} {v['model'] or ''}",
+                      f"{v['year'] or ''} {v['make'] or ''} {v['model'] or ''}"}:
+                if _key(n):
+                    self.by_name.setdefault(_key(n), []).append(v)
+
+    def find(self, text):
+        """(vehicle row, None) or (None, plain-English problem)."""
+        k = _key(text)
+        if not k:
+            return None, None
+        if k in self.by_tag:
+            return self.by_tag[k], None
+        hits = {v['vehicle_id']: v for v in self.by_name.get(k, [])}
+        if len(hits) == 1:
+            return next(iter(hits.values())), None
+        if len(hits) > 1:
+            tags = ', '.join(v['asset_number'] or f"#{v['vehicle_id']}" for v in hits.values())
+            return None, f'"{text}" matches {len(hits)} vehicles ({tags}). Use the property tag instead.'
+        import difflib
+        best = difflib.get_close_matches(k, list(self.by_name) + list(self.by_tag), n=1, cutoff=0.75)
+        hint = ''
+        if best:
+            v = self.by_tag.get(best[0]) or self.by_name[best[0]][0]
+            hint = f' Did you mean {v["label"]}' + (f' ({v["asset_number"]})' if v['asset_number'] else '') + '?'
+        return None, f'No vehicle called "{text}".{hint}'
+
+
 def check(q, user, target: str, records: list[dict]) -> list[dict]:
     """Each record → {'raw', 'values', 'errors', 'warnings'}. raw is what the review screen shows."""
     fl = fields(target)
-    tags = {r['asset_number'].lower() for r in q('SELECT asset_number FROM wsb.vehicle WHERE asset_number IS NOT NULL')}
+    finder = VehicleFinder(q)
+    tags = set(finder.by_tag)
     out, seen = [], set()
     seen_unique = set()
     for rec in records:
@@ -203,9 +246,15 @@ def check(q, user, target: str, records: list[dict]) -> list[dict]:
         values, errors = parse(fl, raw)
         warnings = []
         tag = (values.get('asset_number') or '').lower()
-        if target in ('fuel', 'maintenance', 'trips') and tag and tag not in tags:
-            errors.append(f"No vehicle has property tag {values['asset_number']}.")
-        if target == 'vehicles' and tag and tag in tags:
+        if target in ('fuel', 'maintenance', 'trips') and tag:
+            v, problem = finder.find(values['asset_number'])
+            if problem:
+                errors.append(problem)
+            elif v:
+                values['vehicle_id'] = v['vehicle_id']
+                if _key(values['asset_number']) != _key(v['asset_number']):
+                    warnings.append(f"Matched to {v['label']}" + (f" ({v['asset_number']})" if v['asset_number'] else '') + '.')
+        if target == 'vehicles' and _key(tag) in tags:
             errors.append(f"A vehicle with property tag {values['asset_number']} already exists.")
         if target == 'trips' and values.get('driver_email') and not q(
                 'SELECT 1 FROM wsb.driver WHERE lower(email) = lower(%s) AND approved AND active', (values['driver_email'],), one=True):
@@ -218,14 +267,14 @@ def check(q, user, target: str, records: list[dict]) -> list[dict]:
                     (values['first_name'], values.get('last_name') or ''), one=True):
                 warnings.append('A driver with this name already exists.')
         if target == 'fuel' and not errors and q(
-                """SELECT 1 FROM wsb.fuel_record f JOIN wsb.vehicle v USING (vehicle_id)
-                   WHERE lower(v.asset_number) = %s AND f.fuel_date = %s AND f.total_cost = %s""",
-                (tag, values['fuel_date'], values['total_cost']), one=True):
+                """SELECT 1 FROM wsb.fuel_record f
+                   WHERE f.vehicle_id = %s AND f.fuel_date = %s AND f.total_cost = %s""",
+                (values.get('vehicle_id'), values['fuel_date'], values['total_cost']), one=True):
             warnings.append('Looks like a duplicate: same vehicle, date and cost is already saved.')
         if target == 'maintenance' and not errors and q(
-                """SELECT 1 FROM wsb.maintenance_record m JOIN wsb.vehicle v USING (vehicle_id)
-                   WHERE lower(v.asset_number) = %s AND m.service_date = %s AND lower(m.service_type) = lower(%s)""",
-                (tag, values['service_date'], values['service_type']), one=True):
+                """SELECT 1 FROM wsb.maintenance_record m
+                   WHERE m.vehicle_id = %s AND m.service_date = %s AND lower(m.service_type) = lower(%s)""",
+                (values.get('vehicle_id'), values['service_date'], values['service_type']), one=True):
             warnings.append('Looks like a duplicate: same vehicle, date and service is already saved.')
         key = tuple(str(values.get(f.name)) for f in fl)
         if key in seen:
@@ -248,20 +297,41 @@ def mask(value: str) -> str:
     return ('●' * max(0, len(v) - 4) + v[-4:]) if v else ''
 
 
-_SQL = {
-    'fuel': """SELECT wsb.add_fuel(p_asset_number => %(asset_number)s, p_fuel_date => %(fuel_date)s,
-               p_gallons => %(gallons)s, p_total_cost => %(total_cost)s, p_mileage => %(mileage)s, p_vendor => %(vendor)s)""",
-    'maintenance': """SELECT wsb.add_maintenance(p_asset_number => %(asset_number)s, p_service_date => %(service_date)s,
-               p_service_type => %(service_type)s, p_cost => %(cost)s, p_vendor => %(vendor)s,
-               p_mileage_at_service => %(mileage_at_service)s, p_description => %(description)s)""",
-    'trips': """SELECT wsb.add_trip(p_asset_number => %(asset_number)s, p_driver_email => %(driver_email)s,
-               p_start_datetime => %(start_datetime)s, p_end_datetime => %(end_datetime)s,
-               p_starting_mileage => %(starting_mileage)s, p_ending_mileage => %(ending_mileage)s,
-               p_destination => %(destination)s, p_purpose => %(purpose)s, p_project_program => %(project_program)s)""",
-}
-
 VEHICLE_COLS = ['name', 'asset_number', 'vehicle_type', 'year', 'make', 'model', 'vin', 'license_plate',
                 'department', 'location', 'current_mileage', 'current_hours', 'notes']
+
+
+def _save_service(cur, v):
+    """One service record. If the row says who paid (purchaser, funding source or P-Card #), it is also saved as
+    an invoice with one line, and the service record points at that line, so the cost is counted once."""
+    line_id = None
+    if v.get('purchaser') or v.get('funding_source') or v.get('pcard_workday_no'):
+        cur.execute("""INSERT INTO wsb.invoice (invoice_type, vendor, invoice_date, total_amount, funding_source,
+                                                pcard_workday_no, purchaser, notes)
+                       VALUES ('Maintenance', %s, %s, %s, %s, %s, %s, 'Imported from a spreadsheet')
+                       RETURNING invoice_id""",
+                    ((v.get('vendor') or 'Unknown vendor')[:80], v['service_date'], v.get('cost') or 0,
+                     (v.get('funding_source') or '')[:80] or None, (v.get('pcard_workday_no') or '')[:40] or None,
+                     (v.get('purchaser') or '')[:80] or None))
+        inv = cur.fetchone()['invoice_id']
+        cur.execute("""INSERT INTO wsb.invoice_line (invoice_id, vehicle_id, line_date, category, description, amount)
+                       VALUES (%s, %s, %s, 'Repair', %s, %s) RETURNING line_id""",
+                    (inv, v['vehicle_id'], v['service_date'], v['service_type'], v.get('cost') or 0))
+        line_id = cur.fetchone()['line_id']
+    # Same as wsb.add_maintenance: a record with the same name as a schedule moves that schedule forward.
+    cur.execute("""SELECT rule_id FROM wsb.maintenance_rule
+                   WHERE vehicle_id = %s AND lower(maintenance_type) = lower(%s) AND enabled ORDER BY rule_id LIMIT 1""",
+                (v['vehicle_id'], v['service_type']))
+    rule = cur.fetchone()
+    cur.execute("""INSERT INTO wsb.maintenance_record (vehicle_id, rule_id, invoice_line_id, service_date, mileage_at_service,
+                                                       service_type, cost, vendor, description)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (v['vehicle_id'], rule and rule['rule_id'], line_id, v['service_date'], v.get('mileage_at_service'),
+                 v['service_type'][:50], v.get('cost'), (v.get('vendor') or '')[:50] or None, v.get('description')))
+    if rule:
+        cur.execute("""UPDATE wsb.maintenance_rule SET last_completed_date = greatest(last_completed_date, %s),
+                              last_completed_mileage = coalesce(%s, last_completed_mileage)
+                       WHERE rule_id = %s""", (v['service_date'], v.get('mileage_at_service'), rule['rule_id']))
 
 
 def save(conn, user, target: str, rows: list[dict]) -> int:
@@ -271,8 +341,21 @@ def save(conn, user, target: str, rows: list[dict]) -> int:
         try:
             for i, values in enumerate(rows, 1):
                 cur.execute(f'SAVEPOINT r{i}')
-                if target in _SQL:
-                    cur.execute(_SQL[target], values)
+                if target == 'fuel':
+                    cur.execute("""INSERT INTO wsb.fuel_record (vehicle_id, fuel_date, mileage, gallons, total_cost, vendor)
+                                   VALUES (%(vehicle_id)s, %(fuel_date)s, %(mileage)s, %(gallons)s, %(total_cost)s, %(vendor)s)""",
+                                values)
+                elif target == 'trips':
+                    cur.execute("""INSERT INTO wsb.trip (vehicle_id, driver_id, start_datetime, end_datetime, starting_mileage,
+                                                       ending_mileage, destination, purpose, project_program)
+                                   SELECT %(vehicle_id)s, d.driver_id, %(start_datetime)s, %(end_datetime)s, %(starting_mileage)s,
+                                          %(ending_mileage)s, %(destination)s, %(purpose)s, %(project_program)s
+                                   FROM wsb.driver d WHERE lower(d.email) = lower(%(driver_email)s) AND d.approved AND d.active""",
+                                values)
+                    if cur.rowcount != 1:
+                        raise ValueError(f"{values['driver_email']} is not an approved, active driver.")
+                elif target == 'maintenance':
+                    _save_service(cur, values)
                 elif target == 'vehicles':
                     v = {k: values.get(k) for k in VEHICLE_COLS}
                     v['status'], v['active'] = 'Available', True

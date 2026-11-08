@@ -130,7 +130,7 @@ def test_problems_block_saving_until_fixed_or_unticked(client, sign_in, dbq):
                  ['not a date', 'DEMO-T01', 'abc', '80'],        # bad date and gallons
                  ['11/03/2026', 'DEMO-T01', '12', '50']])
     html = _review(client, 'fuel', 'f.csv', data).get_data(as_text=True)
-    assert 'data-bad="2"' in html and 'No vehicle has property tag NOPE-99' in html and 'Gallons must be a number' in html
+    assert 'data-bad="2"' in html and 'No vehicle called' in html and 'NOPE-99' in html and 'Gallons must be a number' in html
     before = dbq('SELECT count(*) n FROM wsb.fuel_record')[0]['n']
     form = _review_form(html)
     form['action'] = 'save'
@@ -228,3 +228,45 @@ def test_tampered_review_input_is_a_400_not_a_crash(client, sign_in):
     sign_in(client, 'demo_tier1')
     assert client.post('/import/review', data={'target': 'fuel', 'table': '{not json'}).status_code == 400
     assert client.post('/import/review', data={'target': 'bogus'}).status_code == 400
+
+
+def test_vehicles_found_by_name_not_only_tag(client, sign_in, dbq):
+    import importer
+    import app as site
+    with client.application.app_context():
+        f = importer.VehicleFinder(site.q)
+        assert f.find('DEMO-C01')[0]['asset_number'] == 'DEMO-C01'
+        assert f.find('2019 Toyota Camry')[0]['asset_number'] == 'DEMO-C01'
+        assert f.find('toyota  CAMRY')[0]['asset_number'] == 'DEMO-C01'          # case and spaces don't matter
+        assert f.find('Primary Research Skiff')[0]['asset_number'] == 'DEMO-B01'  # the vehicle's Name
+        v, problem = f.find('2019 Toyota Camri')
+        assert v is None and 'Did you mean 2019 Toyota Camry (DEMO-C01)?' in problem
+        v, problem = f.find('Spaceship')
+        assert v is None and problem == 'No vehicle called "Spaceship".'
+
+
+def test_maintenance_sheet_with_pcard_columns_saves_invoice_once(client, sign_in, dbq):
+    """The Water School's 'Vehicle and Boat Maintenance' sheet layout."""
+    sign_in(client, 'demo_tier1')
+    data = _xlsx([['Date', 'Purchaser', 'Vehicle/Vessel', 'Repair items', 'Vendor', 'Funding surce/account', 'Cost',
+                   'Total Cost', 'P-Card WorkDay #', '', 'TOTAL SPENT'],
+                  ['2026-10-05', 'A. Buyer', '2019 Toyota Camry', 'Brake pads', 'TEST Auto', 'Water School ops', 210,
+                   210, '26006092_PCT', '', ''],
+                  ['2026-10-07', '', 'Primary research skiff', 'Oil Change', 'TEST Marine', '', 95, 95, '', '', '']])
+    html = _review(client, 'maintenance', 'maint.xlsx', data).get_data(as_text=True)
+    assert 'data-bad="0"' in html and 'Matched to 2019 Toyota Camry (DEMO-C01)' in html
+    import re
+    spent = lambda: int(re.search(r'data-stat="total">\$([\d,]+)<', client.get('/stats/spending?fy=2026')
+                                  .get_data(as_text=True)).group(1).replace(',', ''))
+    before = spent()
+    form = _review_form(html)
+    form['action'] = 'save'
+    assert client.post('/import/review', data=form).status_code == 302
+    rec = dbq("""SELECT m.*, l.amount, i.purchaser, i.funding_source, i.pcard_workday_no, i.invoice_type
+                 FROM wsb.maintenance_record m JOIN wsb.invoice_line l ON l.line_id = m.invoice_line_id
+                 JOIN wsb.invoice i USING (invoice_id) WHERE m.service_type = 'Brake pads'""")[0]
+    assert rec['pcard_workday_no'] == '26006092_PCT' and rec['purchaser'] == 'A. Buyer'
+    assert rec['funding_source'] == 'Water School ops' and rec['invoice_type'] == 'Maintenance' and rec['amount'] == 210
+    plain = dbq("SELECT invoice_line_id FROM wsb.maintenance_record WHERE vendor = 'TEST Marine'")[0]
+    assert plain['invoice_line_id'] is None                     # no payment details: just the service record
+    assert spent() == before + 210 + 95                         # the 210 is counted once, not twice
