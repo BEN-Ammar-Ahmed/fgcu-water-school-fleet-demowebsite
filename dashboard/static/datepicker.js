@@ -1,4 +1,5 @@
 // Date range + time picker for a form with two datetime fields named pickup_at and return_at.
+// The calendar stays folded until you click Pick up or Return; Done, Esc or a click outside folds it again.
 // Click a start day, then an end day; pick the times from the list. Writes the same values the plain fields would
 // ("2026-11-20T08:00"), so the server doesn't change. Without JavaScript the plain fields are used.
 (function () {
@@ -31,17 +32,18 @@
     var shown = dateOf(st.start || today); shown.setDate(1);
 
     var box = document.createElement('div');
-    box.className = 'dp wide';
+    box.className = 'dp wide closed';
     box.innerHTML =
       '<div class="dp-fields">' +
-      '<button type="button" class="dp-field" data-w="start"><span class="dp-lbl">Pick up</span><span class="dp-val"></span></button>' +
-      '<button type="button" class="dp-field" data-w="end"><span class="dp-lbl">Return</span><span class="dp-val"></span></button></div>' +
-      '<div class="dp-panel">' +
+      '<button type="button" class="dp-field" data-w="start" aria-expanded="false"><span class="dp-lbl">Pick up</span><span class="dp-val"></span></button>' +
+      '<button type="button" class="dp-field" data-w="end" aria-expanded="false"><span class="dp-lbl">Return</span><span class="dp-val"></span></button></div>' +
+      '<div class="dp-drop"><div class="dp-clip"><div class="dp-panel">' +
       '<div class="dp-cal"><div class="dp-head"><button type="button" class="dp-nav" data-n="-1" aria-label="Previous month">&#8249;</button>' +
       '<b class="dp-month" aria-live="polite"></b><button type="button" class="dp-nav" data-n="1" aria-label="Next month">&#8250;</button></div>' +
       '<div class="dp-grid"></div><p class="dp-hint"></p></div>' +
       '<div class="dp-times"><div class="dp-tabs"><button type="button" data-w="start">Pick-up time</button>' +
-      '<button type="button" data-w="end">Return time</button></div><div class="dp-slots" aria-label="Times"></div></div></div>';
+      '<button type="button" data-w="end">Return time</button></div><div class="dp-slots" aria-label="Times"></div></div>' +
+      '<div class="dp-foot"><button type="button" class="dp-done">Done</button></div></div></div></div>';
     var anchor = pick.closest('label') || pick;
     anchor.parentNode.insertBefore(box, anchor);
     [pick, ret].forEach(function (i) { var l = i.closest('label'); if (l) l.hidden = true; i.type = 'hidden'; });
@@ -80,8 +82,24 @@
       var list = box.querySelector('.dp-slots'), on = list.querySelector('.dp-slot.on');
       if (on) list.scrollTop = on.offsetTop - list.offsetTop - 60;   // scroll the list only, never the page
     }
+    function isOpen() { return !box.classList.contains('closed'); }
+    function setOpen(open) {
+      box.classList.toggle('closed', !open);
+      box.querySelectorAll('.dp-field').forEach(function (f) { f.setAttribute('aria-expanded', String(open)); });
+      if (open) slots();          // the list can only scroll to the chosen time once it is visible
+    }
+    // composedPath, not contains(): clicking a day redraws the calendar, so the clicked button is gone by now
+    document.addEventListener('click', function (e) { if (isOpen() && e.composedPath().indexOf(box) < 0) setOpen(false); });
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && isOpen()) { e.preventDefault(); setOpen(false); box.querySelector('.dp-field.on').focus(); }
+    });
     box.addEventListener('click', function (e) {
       var t = e.target.closest('button'); if (!t) return;
+      if (t.classList.contains('dp-done')) { setOpen(false); box.querySelector('.dp-field.on').focus(); return; }
+      if (t.classList.contains('dp-field')) {
+        if (isOpen() && t.dataset.w === st.which) { setOpen(false); return; }   // click the open one again: fold
+        setOpen(true);
+      }
       if (t.dataset.n) { shown.setMonth(shown.getMonth() + +t.dataset.n); cal(); return; }
       if (t.dataset.day) {
         var d = t.dataset.day;
