@@ -17,6 +17,7 @@
       </select></label>
     <div class="actions"><button class="btn btn-primary">{{ icon('search', 16) }} Show free vehicles</button></div>
   </form>
+  <script>{{ inline_asset('datepicker.js') }}</script>{# inside the page, so the picker is in place before it first shows #}
 
   {% if problem %}<div class="flash flash-error" role="alert">{{ problem }}</div>{% endif %}
 

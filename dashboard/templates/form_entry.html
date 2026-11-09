@@ -39,5 +39,6 @@
       <a class="btn ghost" href="{{ cancel }}">Cancel</a>
     </div>
   </form>
+  {% if fields|selectattr('name', 'equalto', 'pickup_at')|list %}<script>{{ inline_asset('datepicker.js') }}</script>{% endif %}
 </div>
 {% endblock %}

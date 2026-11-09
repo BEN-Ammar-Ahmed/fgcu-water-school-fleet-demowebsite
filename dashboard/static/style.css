@@ -320,7 +320,8 @@ a.stat:hover { border-color: var(--ink2); }
 @media (max-width: 640px) { .res-facts, .res-history li { grid-template-columns: 1fr; } }
 .res-table td:nth-child(n+2) { min-width: 9em; }   /* readable dates on phones (the table scrolls) */
 @media (max-width: 900px) { .navtext { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
-@media (max-width: 520px) { .brand-text, .who .badge { display: none; } .topnav { gap: 10px; } }
+@media (max-width: 520px) { .brand-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .who .badge { display: none; } .topnav { gap: 10px; } }
 a.who { text-decoration: none; color: var(--ink); }
 .pw-reset { display: flex; gap: 6px; padding: 6px 0; }
 .pw-reset input { font: inherit; font-size: 13px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 6px; min-width: 0; flex: 1; }

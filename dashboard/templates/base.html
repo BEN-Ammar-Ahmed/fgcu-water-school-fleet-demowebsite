@@ -12,7 +12,7 @@
 <body class="{% block bodyclass %}{% endblock %}">
 {% if user %}
 <header class="topbar">
-  <a class="brand" aria-label="FGCU Water School Fleet (home)" href="{{ url_for('dashboard') }}"><img class="logo" src="{{ asset('logo.svg') }}" alt="" width="28" height="28">
+  <a class="brand" href="{{ url_for('dashboard') }}"><img class="logo" src="{{ asset('logo.svg') }}" alt="" width="28" height="28">
     <span class="brand-text"><small>FGCU Water School</small>Fleet</span></a>
   <div class="topsearch">{% block topsearch %}
     <form class="topsearch-form" action="{{ url_for('search_page') }}" method="get" role="search">
@@ -61,7 +61,6 @@
 {% block scripts %}<script src="{{ asset('search.js') }}" defer></script>{% endblock %}
 <script src="{{ asset('suggest.js') }}" defer></script>
 <script src="{{ asset('confirm.js') }}" defer></script>
-<script src="{{ asset('datepicker.js') }}" defer></script>
 <script>
 // Top-bar menus (Add, your name): open on hover with a mouse, on click anywhere; close when you click elsewhere.
 document.querySelectorAll('details.menu').forEach(function (m) {

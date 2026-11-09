@@ -45,8 +45,15 @@ def static_url_for(app):
         except OSError:
             v = 0
         return url_for('static', filename=filename, v=v)
+    def inline_asset(filename):
+        """A small script's text, to put inside the page: it then runs before the page is first shown
+        (no jump when it adds things), with no extra download."""
+        from markupsafe import Markup
+        with open(_os.path.join(app.static_folder, filename), encoding='utf-8') as f:
+            return Markup(f.read().replace('</script', r'<\/script'))
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 365 * 24 * 3600
     app.jinja_env.globals['asset'] = asset
+    app.jinja_env.globals['inline_asset'] = inline_asset
 
 
 def display_name(v):

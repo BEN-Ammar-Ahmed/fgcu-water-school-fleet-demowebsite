@@ -39,9 +39,9 @@
       '<div class="dp-panel">' +
       '<div class="dp-cal"><div class="dp-head"><button type="button" class="dp-nav" data-n="-1" aria-label="Previous month">&#8249;</button>' +
       '<b class="dp-month" aria-live="polite"></b><button type="button" class="dp-nav" data-n="1" aria-label="Next month">&#8250;</button></div>' +
-      '<div class="dp-grid" role="grid"></div><p class="dp-hint"></p></div>' +
+      '<div class="dp-grid"></div><p class="dp-hint"></p></div>' +
       '<div class="dp-times"><div class="dp-tabs"><button type="button" data-w="start">Pick-up time</button>' +
-      '<button type="button" data-w="end">Return time</button></div><div class="dp-slots" role="listbox"></div></div></div>';
+      '<button type="button" data-w="end">Return time</button></div><div class="dp-slots" aria-label="Times"></div></div></div>';
     var anchor = pick.closest('label') || pick;
     anchor.parentNode.insertBefore(box, anchor);
     [pick, ret].forEach(function (i) { var l = i.closest('label'); if (l) l.hidden = true; i.type = 'hidden'; });
@@ -56,7 +56,7 @@
     }
     function cal() {
       box.querySelector('.dp-month').textContent = MONTHS[shown.getMonth()] + ' ' + shown.getFullYear();
-      var g = DAYS.map(function (d) { return '<span class="dp-dow">' + d + '</span>'; }).join('');
+      var g = DAYS.map(function (d) { return '<span class="dp-dow" aria-hidden="true">' + d + '</span>'; }).join('');
       for (var i = 0; i < shown.getDay(); i++) g += '<span></span>';
       var n = new Date(shown.getFullYear(), shown.getMonth() + 1, 0).getDate();
       for (var d = 1; d <= n; d++) {
@@ -74,10 +74,11 @@
     function slots() {
       var cur = st.which === 'start' ? st.tStart : st.tEnd;
       box.querySelector('.dp-slots').innerHTML = TIMES.map(function (t) {
-        return '<button type="button" role="option" class="dp-slot' + (t === cur ? ' on' : '') + '" aria-selected="' + (t === cur) +
+        return '<button type="button" class="dp-slot' + (t === cur ? ' on' : '') + '" aria-pressed="' + (t === cur) +
                '" data-t="' + t + '">' + ampm(t) + '</button>';
       }).join('');
-      var on = box.querySelector('.dp-slot.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+      var list = box.querySelector('.dp-slots'), on = list.querySelector('.dp-slot.on');
+      if (on) list.scrollTop = on.offsetTop - list.offsetTop - 60;   // scroll the list only, never the page
     }
     box.addEventListener('click', function (e) {
       var t = e.target.closest('button'); if (!t) return;
