@@ -2,7 +2,7 @@
 {% block title %}Sign in{% endblock %}
 {% block body %}
 <div class="login">
-  <img class="login-logo" src="{{ asset('logo.svg') }}" alt="" width="48" height="48">
+  <img class="login-logo{{ ' logo-wide' if logo_wide }}" src="{{ asset(logo_file) }}" alt="{{ 'FGCU Water School' if logo_wide }}" {% if not logo_wide %}width="48" {% endif %}height="48">
   <p class="muted small login-org">FGCU Water School</p>
   <h1>Fleet</h1>
   {% if error %}<div class="flash flash-error" role="alert">{{ error }}</div>{% endif %}

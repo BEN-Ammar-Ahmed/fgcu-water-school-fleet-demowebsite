@@ -54,6 +54,12 @@ def static_url_for(app):
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 365 * 24 * 3600
     app.jinja_env.globals['asset'] = asset
     app.jinja_env.globals['inline_asset'] = inline_asset
+    # The logo: static/logo.svg unless LOGO_FILE names another file in static/ (e.g. the official FGCU Water School
+    # logo from University Marketing). LOGO_WIDE=1 for a wide logo that already contains the words.
+    logo = os.environ.get('LOGO_FILE', 'logo.svg').strip() or 'logo.svg'
+    if '/' in logo or '\\' in logo or not _os.path.isfile(_os.path.join(app.static_folder, logo)):
+        logo = 'logo.svg'
+    app.jinja_env.globals.update(logo_file=logo, logo_wide=os.environ.get('LOGO_WIDE', '') in ('1', 'true', 'yes'))
 
 
 def display_name(v):

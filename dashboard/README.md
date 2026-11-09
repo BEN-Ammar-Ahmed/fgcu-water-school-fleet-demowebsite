@@ -28,6 +28,7 @@ Also in `.env` (never in git):
 | `FLEET_URL`, `RESERVE_URL` | The two sites' addresses, used in links and emails (default `http://localhost:5000` and `:5001`). |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_REPLY_TO` | Real email sending (see `docs/reservations.md`). Without them emails wait in the outbox. |
 | `FLEET_CONTACT_EMAIL` | Optional "Questions?" address in the request site's footer. |
+| `LOGO_FILE`, `LOGO_WIDE` | Optional: use another logo file from `static/` (e.g. the official FGCU Water School logo). `LOGO_WIDE=1` for a wide logo with the words in it. |
 
 ## Database setup
 

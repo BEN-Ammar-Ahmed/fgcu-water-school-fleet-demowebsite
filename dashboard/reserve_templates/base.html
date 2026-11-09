@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Request a vehicle{% endblock %} · FGCU Water School</title>
   <link rel="icon" type="image/svg+xml" href="{{ asset('logo.svg') }}">
-  <meta name="theme-color" content="#111111">
+  <meta name="theme-color" content="#004b87">
   <meta name="description" content="Request a vehicle from the FGCU Water School fleet.">
   <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 <body class="reserve-site">
 <header class="topbar">
-  <a class="brand" href="{{ url_for('index') }}"><img class="logo" src="{{ asset('logo.svg') }}" alt="" width="28" height="28">
-    <span class="brand-text"><small>FGCU Water School</small>Vehicle requests</span></a>
+  <a class="brand" href="{{ url_for('index') }}"><img class="logo{{ ' logo-wide' if logo_wide }}" src="{{ asset(logo_file) }}" alt="{{ 'FGCU Water School Vehicle requests' if logo_wide }}" {% if not logo_wide %}width="28" {% endif %}height="{{ 34 if logo_wide else 28 }}">
+    {% if not logo_wide %}<span class="brand-text"><small>FGCU Water School</small>Vehicle requests</span>{% endif %}</a>
 </header>
 <main class="page">
   {% for cat, msg in get_flashed_messages(with_categories=true) %}

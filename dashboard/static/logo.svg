@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Water School Fleet">
-  <rect width="32" height="32" rx="7" fill="#111111"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="FGCU Water School">
+  <rect width="32" height="32" rx="7" fill="#004b87"/>
   <path d="M6 13.5c2.2 0 2.2-1.6 4.5-1.6s2.3 1.6 4.5 1.6 2.3-1.6 4.5-1.6 2.3 1.6 4.5 1.6 1.9-1 2-1.3"
         fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
   <path d="M6 19.5c2.2 0 2.2-1.6 4.5-1.6s2.3 1.6 4.5 1.6 2.3-1.6 4.5-1.6 2.3 1.6 4.5 1.6 1.9-1 2-1.3"
-        fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+        fill="none" stroke="#2fd08f" stroke-width="2" stroke-linecap="round"/>
 </svg>

@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Fleet{% endblock %} · Water School Fleet</title>
   <link rel="icon" type="image/svg+xml" href="{{ asset('logo.svg') }}">
-  <meta name="theme-color" content="#111111">
+  <meta name="theme-color" content="#004b87">
   <meta name="description" content="FGCU Water School fleet: vehicles, maintenance, trips, fuel and reservations.">
   <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 <body class="{% block bodyclass %}{% endblock %}">
 {% if user %}
 <header class="topbar">
-  <a class="brand" href="{{ url_for('dashboard') }}"><img class="logo" src="{{ asset('logo.svg') }}" alt="" width="28" height="28">
-    <span class="brand-text"><small>FGCU Water School</small>Fleet</span></a>
+  <a class="brand" href="{{ url_for('dashboard') }}"><img class="logo{{ ' logo-wide' if logo_wide }}" src="{{ asset(logo_file) }}" alt="{{ 'FGCU Water School Fleet' if logo_wide }}" {% if not logo_wide %}width="28" {% endif %}height="{{ 34 if logo_wide else 28 }}">
+    {% if not logo_wide %}<span class="brand-text"><small>FGCU Water School</small>Fleet</span>{% endif %}</a>
   <div class="topsearch">{% block topsearch %}
     <form class="topsearch-form" action="{{ url_for('search_page') }}" method="get" role="search">
       {{ icon('search', 16) }}<input type="search" name="q" data-suggest="search" aria-label="Search the fleet" placeholder="Search the fleet  ( / )">

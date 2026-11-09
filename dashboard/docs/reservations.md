@@ -144,8 +144,4 @@ writing to the outbox, and whatever sends the emails just needs to read `sent_at
 
 ## Questions for the sponsor
 
-1. Who should get the "new request" email: both top admins, or one shared mailbox?
-2. The request site is open to anyone with the link. Is that OK, or should it be limited (for example, only @fgcu.edu emails)?
-3. How far ahead must a request be sent (for example, at least 2 days before pick-up)?
-4. Should approved requests need a valid driver's license on file for every driver before approval?
-5. Which email address should the emails come from?
+Collected with the other open questions in [`questions-for-regina.md`](questions-for-regina.md).
