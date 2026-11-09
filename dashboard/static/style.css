@@ -450,14 +450,26 @@ a.stat:hover { border-color: var(--ink); }
 .reserve-start .res-head { margin-top: 8px; }
 
 /* Date + time picker (static/datepicker.js) */
-.dp { display: grid; gap: 10px; }
+.dp { display: grid; gap: 0; }
 .dp-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dp-field { display: grid; gap: 2px; text-align: left; padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--radius);
             background: var(--surface); font: inherit; color: var(--ink); cursor: pointer; }
 .dp-field.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 .dp-lbl { font-size: 12px; color: var(--ink2); }
 .dp-val { font-weight: 600; }
-.dp-panel { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface); }
+.dp-field:hover { border-color: var(--ink2); }
+.dp.closed .dp-field.on { border-color: var(--line); box-shadow: none; }
+.dp.closed .dp-field.on:hover { border-color: var(--ink2); }
+/* Folded until Pick up or Return is clicked; slides open (grid rows 0fr -> 1fr) */
+.dp-drop { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .22s ease, opacity .18s ease; }
+.dp-clip { min-height: 0; overflow: hidden; }
+.dp.closed .dp-drop { grid-template-rows: 0fr; opacity: 0; visibility: hidden;
+  transition: grid-template-rows .22s ease, opacity .18s ease, visibility 0s .22s; }
+.dp-panel { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface); margin-top: 10px; }
+.dp-foot { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-top: -6px; }
+.dp-done { padding: 7px 18px; border: 1px solid var(--fgcu-blue); border-radius: 8px; background: var(--fgcu-blue); color: var(--surface); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.dp-done:hover { filter: brightness(1.12); }
+@media (prefers-reduced-motion: reduce) { .dp-drop, .dp.closed .dp-drop { transition: none; } }
 .dp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .dp-nav { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 18px; line-height: 1; cursor: pointer; color: var(--ink); }
 .dp-nav:hover { border-color: var(--ink); }
