@@ -111,7 +111,7 @@ numbers, who is on the site, and a log of who did what and when.
   database functions update while logging a trip, fuel or service is not treated as an edit. The trip/fuel/service
   log line already says what was logged.
 
-The approved mockups are in `dashboard/docs/mockups/` (`admin-layout.html`, layout B; `typing-suggestions.html`).
+The approved mockups are in `dashboard/docs/dev-notes/mockups/` (`admin-layout.html`, layout B; `typing-suggestions.html`).
 Names and numbers in them are made up.
 
 ## Left to the builder

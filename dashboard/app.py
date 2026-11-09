@@ -151,10 +151,6 @@ def remember_last_seen(response):
     return response
 
 
-def ensure_setup():
-    with psycopg2.connect(DB_URL) as conn, conn.cursor() as cur:
-        cur.execute((HERE / 'setup.sql').read_text(encoding='utf-8'))
-
 
 app.jinja_env.globals['display_name'] = display_name
 static_url_for(app)
@@ -914,7 +910,6 @@ app.register_blueprint(reservations.res)
 
 
 if __name__ == '__main__':
-    ensure_setup()
     UPLOADS.mkdir(exist_ok=True)
     port = int(os.environ.get('PORT', 5000))
     print(f'Water School Fleet dashboard ({DB_WHERE}): http://localhost:{port}')

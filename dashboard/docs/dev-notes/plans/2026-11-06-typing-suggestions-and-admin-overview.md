@@ -13,8 +13,8 @@ combobox. Edit routes diff the row before and after saving and pass the diff to 
 **Tech Stack:** Flask, Jinja, psycopg2, PostgreSQL 17 (+ `pg_trgm`), plain JavaScript, pytest (Docker test DB,
 see `tests/conftest.py`).
 
-**Spec:** `dashboard/docs/specs/2026-11-05-typing-suggestions-and-admin-overview-design.md`. Mockups are in
-`dashboard/docs/mockups/` (`admin-layout.html` layout B, `typing-suggestions.html`).
+**Spec:** `dashboard/docs/dev-notes/specs/2026-11-05-typing-suggestions-and-admin-overview-design.md`. Mockups are in
+`dashboard/docs/dev-notes/mockups/` (`admin-layout.html` layout B, `typing-suggestions.html`).
 
 ## Global Constraints
 
@@ -215,7 +215,7 @@ see `tests/conftest.py`).
   It has no "Most used vehicles" text, has `id="attention"` with the overdue count and links, `id="online"`, and `id="activity"` with at most 10 rows and the
   detail line of a just-made edit. The People page shows the level counts.
 - [ ] **Step 2: Run** `pytest tests/test_admin_overview.py tests/test_admin_people.py -v`. Expect a FAIL.
-- [ ] **Step 3: Implement** to match `docs/mockups/admin-layout.html` option B, using existing `style.css` tokens.
+- [ ] **Step 3: Implement** to match `docs/dev-notes/mockups/admin-layout.html` option B, using existing `style.css` tokens.
 - [ ] **Step 4: Run** the tests, then the full `pytest`. Expect a PASS.
 - [ ] **Step 5: Check by hand** at desktop width and at a 375px width. Nothing overlaps and the page doesn't scroll sideways.
 - [ ] **Step 6: Commit** `Admin overview: layout B, level counts move to People`

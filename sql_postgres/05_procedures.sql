@@ -209,7 +209,7 @@ GRANT EXECUTE ON FUNCTION
 
 SELECT wsb.lock_out_public_api();
 
--- Examples (the DEMO asset numbers exist only with 03b_demo_data.sql)
+-- Examples (the DEMO asset numbers exist only with test_data/03b_demo_data.sql)
 -- SELECT wsb.add_trip(p_asset_number => 'DEMO-T01', p_driver_email => 'arivera@example.edu',
 --        p_start_datetime => '2026-11-02 08:00', p_destination => 'Matlacha Boat Ramp', p_purpose => 'Field work');
 -- SELECT wsb.add_fuel(p_asset_number => 'DEMO-C01', p_fuel_date => '2026-11-02', p_gallons => 11.2,

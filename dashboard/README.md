@@ -32,7 +32,7 @@ Also in `.env` (never in git):
 ## Database setup
 
 Run the files in `../sql_postgres/` in order (see the README there). On Supabase: SQL Editor -> paste a file -> Run.
-Never run `03b_demo_data.sql` on the real project.
+Never run the files in `sql_postgres/test_data/` on the real project.
 
 ## Sign-in
 
@@ -125,7 +125,7 @@ To move off Supabase to FGCU's own PostgreSQL, run the setup files (step 3) on t
 
 ### 3. Setting up a new database
 
-1. Run the files in `../sql_postgres/` in order. See the README there, and skip `03b_demo_data.sql` (fictional).
+1. Run the files in `../sql_postgres/` in order. See the README there, and skip `test_data/` (fictional).
 2. Load the real vehicles and maintenance rules with `03c_real_vehicles.sql`.
    It is confidential (VINs, plates), so it is not on GitHub; the student team hands it over directly.
 3. Load the rest of the real data with `04_import_staging.sql` (see "Data still to load" below).
