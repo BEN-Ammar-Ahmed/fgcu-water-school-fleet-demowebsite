@@ -72,8 +72,14 @@ def main():
     email = input('Email: ')
     suggested = re.sub(r'[^a-z0-9_.-]', '', email.split('@')[0].lower())
     username = input(f'Username [{suggested}]: ') or suggested
-    pw = getpass.getpass(f'Password (at least {passwords.MIN_LENGTH} characters): ')
-    if pw != getpass.getpass('Type it again: '):
+    # Typed hidden at a keyboard; read as plain lines when answers are piped in (e.g. from a setup script).
+    def ask(prompt):
+        if sys.stdin.isatty():
+            return getpass.getpass(prompt)
+        print(prompt)
+        return sys.stdin.readline().rstrip('\r\n')
+    pw = ask(f'Password (at least {passwords.MIN_LENGTH} characters): ')
+    if pw != ask('Type it again: '):
         print("The two passwords don't match. Nothing was saved.")
         return 1
     uid, problem = create(conn, name, email, username, pw)
