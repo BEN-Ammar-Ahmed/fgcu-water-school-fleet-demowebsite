@@ -1,6 +1,7 @@
 # Never upload passwords, real documents or test files to Vercel
 .env
 *.env
+.env.*
 uploads/
 tests/
 docs/

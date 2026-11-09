@@ -3,3 +3,5 @@ uploads/
 __pycache__/
 .pytest_cache/
 .vercel/
+.vercel
+.env*
