@@ -1,0 +1,9 @@
+# Never upload passwords, real documents or test files to Vercel
+.env
+*.env
+uploads/
+tests/
+docs/
+__pycache__/
+.pytest_cache/
+.vercel/

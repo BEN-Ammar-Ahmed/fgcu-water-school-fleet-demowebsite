@@ -10,10 +10,11 @@ from pathlib import Path
 
 import psycopg2, psycopg2.extras
 from flask import (Flask, render_template, request, redirect, url_for, session,
-                   flash, abort, send_from_directory, g, jsonify)
+                   flash, abort, g, jsonify)
 from werkzeug.utils import secure_filename
 
 from changes import diff as change_diff
+import doc_store
 from common import VEHICLE_TYPES, Database, database_url, display_name, load_env_file, reserve_url, static_url_for, compress_responses
 from forms import Field, parse
 from search import KINDS, run_search
@@ -497,7 +498,7 @@ def vehicle_delete(vid):
             flash(db_error_message(e), 'error')
         return redirect(url_for('vehicle', vid=vid))
     for f in files:
-        (UPLOADS / f).unlink(missing_ok=True)
+        doc_store.remove(sys.modules[__name__], f)
     flash('Vehicle deleted.', 'ok')
     log_activity('change', f"Deleted vehicle #{vid} {display_name(before) if before else ''}".strip())
     return redirect(url_for('dashboard'))
@@ -783,9 +784,8 @@ def doc_upload(vid):
         flash('That file type is not allowed. Use PDF, image, Word, Excel or text.', 'error')
         return redirect(url_for('vehicle', vid=vid))
     rel = f'{vid}/{uuid.uuid4().hex[:8]}_{name}'
-    (UPLOADS / str(vid)).mkdir(parents=True, exist_ok=True)
-    f.save(UPLOADS / rel)
     try:
+        doc_store.save(sys.modules[__name__], rel, f)
         run("""INSERT INTO wsb.vehicle_document (vehicle_id, document_type, file_location, issue_date,
                expiration_date, access_level, notes) VALUES (%s,%s,%s,%s,%s,%s,%s)""",
             (vid, request.form.get('document_type'), rel, request.form.get('issue_date') or None,
@@ -793,7 +793,10 @@ def doc_upload(vid):
         flash('File uploaded.', 'ok')
         log_activity('change', f"Uploaded {request.form.get('document_type')} · vehicle #{vid} · {name}")
     except psycopg2.Error as e:
-        (UPLOADS / rel).unlink(missing_ok=True)
+        try:
+            doc_store.remove(sys.modules[__name__], rel)
+        except psycopg2.Error:
+            pass
         flash(f'Could not save: {e.diag.message_primary}', 'error')
     return redirect(url_for('vehicle', vid=vid))
 
@@ -813,16 +816,16 @@ def doc_file(did):
     d = q('SELECT * FROM wsb.vehicle_document WHERE document_id = %s', (did,), one=True) or abort(404)
     if d['access_level'] not in doc_levels(current_user()):
         abort(403)
-    folder, fname = d['file_location'].split('/', 1)
+    fname = d['file_location'].split('/', 1)[1]
     log_activity('download', f"Opened {d['document_type']} · vehicle #{d['vehicle_id']} · {fname}")
-    return send_from_directory(UPLOADS / folder, fname, as_attachment=request.args.get('dl') == '1')
+    return doc_store.response(sys.modules[__name__], d['file_location'], request.args.get('dl') == '1')
 
 
 @app.route('/documents/<int:did>/delete', methods=['POST'])
 @require(delete=True)
 def doc_delete(did):
     d = run('DELETE FROM wsb.vehicle_document WHERE document_id = %s RETURNING vehicle_id, file_location', (did,)) or abort(404)
-    (UPLOADS / d['file_location']).unlink(missing_ok=True)
+    doc_store.remove(sys.modules[__name__], d['file_location'])
     flash('Document deleted.', 'ok')
     log_activity('change', f'Deleted document #{did}')
     return redirect(safe_next(request.form.get('back')) or url_for('documents'))

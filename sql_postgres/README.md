@@ -26,6 +26,7 @@ Supabase (PostgreSQL 17) or a local PostgreSQL.
 | `13_reservations.sql` | Vehicle requests, their history, and the email outbox | Run | Run |
 | `14_passwords.sql` | Username + password sign-in (hashed passwords, lockout). Then run `python set_password.py <you>` | Run | Run |
 | `15_public_reservations.sql` | The separate request site: private links, the vehicle the requester picked | Run | Run |
+| `16_document_files.sql` | Uploaded documents stored in the database, for hosts with no lasting disk (Vercel) | Run | Run |
 
 Files in `test_data/` hold fictional data for practice databases and the automatic tests only.
 

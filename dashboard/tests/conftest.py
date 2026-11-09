@@ -39,6 +39,7 @@ SQL_FILES = [
     '13_reservations.sql',
     '14_passwords.sql',
     '15_public_reservations.sql',
+    '16_document_files.sql',
 ]
 
 

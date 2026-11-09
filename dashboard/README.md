@@ -108,6 +108,21 @@ Run the site on a **server** (an FGCU server, or a host such as Render or Railwa
 Staff then only open a normal web page, which every network allows.
 The server, not the staff computer, needs to reach the database.
 
+**Vercel** also works (that's how the demo for the Water School runs). Make two Vercel projects from this
+repository, both with **Root Directory** `dashboard`. `api/index.py` and `vercel.json` do the rest. Settings
+(Environment Variables) for each project:
+
+| Setting | Fleet site project | Request site project |
+|---|---|---|
+| `SITE` | `fleet` | `reserve` |
+| `DATABASE_URL` | Supabase **Transaction pooler** string (port 6543) | same |
+| `SECRET_KEY` / `RESERVE_SECRET_KEY` | long random text | long random text |
+| `FLEET_URL`, `RESERVE_URL` | the two Vercel addresses | same |
+
+On Vercel, uploaded documents are kept in the database (`wsb.document_file`, from `16_document_files.sql`)
+because Vercel has no lasting disk, and uploads are limited to about 4 MB each. `.vercelignore` keeps `.env`,
+`uploads/` and the tests from being uploaded.
+
 ### 2. Connecting to the database
 
 The connection is one line in `dashboard/.env` (or the host's settings page): `DATABASE_URL=...`.

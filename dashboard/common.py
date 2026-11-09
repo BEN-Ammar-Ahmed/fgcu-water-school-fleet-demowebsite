@@ -201,8 +201,9 @@ class Database:
 
     def later(self, sql, args=(), on_error=None):
         """A write the page doesn't need to wait for (activity log, last seen). With the pool on it runs in
-        the background after the page is sent; without it (tests), right away."""
-        if not self._pooled():
+        the background after the page is sent; without it (tests), right away. On Vercel also right away:
+        Vercel may pause the app as soon as the page is sent, so a background write could be lost."""
+        if not self._pooled() or os.environ.get('VERCEL'):
             try:
                 self.run(sql, args)
             except psycopg2.Error:
