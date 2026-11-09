@@ -31,7 +31,10 @@ Also in `.env` (never in git):
 
 ## Database setup
 
-Run the files in `../sql_postgres/` in order (see the README there). On Supabase: SQL Editor -> paste a file -> Run.
+`python setup_database.py` runs the files in `../sql_postgres/` in order on the database in `DATABASE_URL`
+(`--create-db` makes a local one first, `--sample` adds fictional practice data). Then `python create_admin.py` makes
+the first Tier 1 account. Step by step for a new owner: `../HANDOVER.md`.
+By hand instead: run the files in order (see the README there). On Supabase: SQL Editor -> paste a file -> Run.
 Never run the files in `sql_postgres/test_data/` on the real project.
 
 ## Sign-in
@@ -70,6 +73,7 @@ Anyone with the link picks free vehicles and sends a request; it lands in the fl
 | `static/style.css`, `static/search.js` | Look, and the expanding search bar |
 | `admin.py` | Admin area: overview, people (tiers, switches, passwords), activity, data |
 | `passwords.py`, `set_password.py` | Password checks, lockout and hashing; setting a password from a terminal |
+| `setup_database.py`, `create_admin.py` | Set up an empty database from `sql_postgres/`; make the first Tier 1 account |
 | `reservations.py` | Reservations inbox on the fleet site (approve, deny, ask for info) |
 | `reserve_app.py`, `reserve_templates/` | The separate vehicle request site |
 | `reservation_core.py`, `mailer.py` | Shared reservation logic; email outbox and sending |

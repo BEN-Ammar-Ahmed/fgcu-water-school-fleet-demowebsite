@@ -6,6 +6,9 @@ vehicles, maintenance, trips, fuel, invoices, documents, drivers, and vehicle re
 COP 3710 Database Project with Service Learning, Fall 2026. Team Incognito: Evan Goudy (lead), Ahmed Ben Ammar,
 Marina Bunyatova, Naila Desgrottes. Community partner: The Water School.
 
+**Taking this over?** Start with [`HANDOVER.md`](HANDOVER.md): set up your own empty database and import your data,
+no SQL needed.
+
 ## What's in this repository
 
 | Where | What | Start with |

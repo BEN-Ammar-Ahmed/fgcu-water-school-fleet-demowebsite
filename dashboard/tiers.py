@@ -84,7 +84,7 @@ class CurrentUser:
         if self.can('trips_fuel'):
             out += ['fuel', 'trips']
         if self.can('maintenance'):
-            out.append('maintenance')
+            out += ['maintenance', 'schedules']
         if self.is_admin:
             out.append('drivers')
         return out

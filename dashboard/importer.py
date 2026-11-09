@@ -75,6 +75,17 @@ TARGETS = {
             (Field('pcard_workday_no', 'P-Card Workday #'), ['pcardworkday', 'pcardworkdayno', 'pcard', 'workday', 'workdayno', 'pcardnumber']),
         ],
     },
+    'schedules': {
+        'label': 'Maintenance schedules',
+        'fields': [
+            (Field('asset_number', 'Vehicle (tag or name)', required=True), ['asset', 'assetnumber', 'assetno', 'propertytag', 'tag', 'vehicle', 'vehiclevessel', 'vessel', 'boat', 'vehiclename', 'unit', 'vehiclenumber']),
+            (Field('maintenance_type', 'Service', required=True), ['service', 'maintenancetype', 'maintenance', 'task', 'item', 'type', 'servicetype']),
+            (Field('time_interval_months', 'Every (months)', 'int'), ['months', 'everymonths', 'intervalmonths', 'frequencymonths', 'timeinterval', 'monthinterval']),
+            (Field('mileage_interval', 'Every (miles or hours)', 'int'), ['miles', 'everymiles', 'mileageinterval', 'intervalmiles', 'hoursinterval', 'everyhours']),
+            (Field('last_completed_date', 'Last done', 'date'), ['lastdone', 'lastcompleted', 'lastservice', 'datelastchanged', 'lastchanged', 'lastdate', 'datelastdone']),
+            (Field('last_completed_mileage', 'Mileage when last done', 'int'), ['lastmileage', 'mileagelastdone', 'lastcompletedmileage', 'lasthours']),
+        ],
+    },
     'trips': {
         'label': 'Trips',
         'fields': [
@@ -246,7 +257,7 @@ def check(q, user, target: str, records: list[dict]) -> list[dict]:
         values, errors = parse(fl, raw)
         warnings = []
         tag = (values.get('asset_number') or '').lower()
-        if target in ('fuel', 'maintenance', 'trips') and tag:
+        if target in ('fuel', 'maintenance', 'trips', 'schedules') and tag:
             v, problem = finder.find(values['asset_number'])
             if problem:
                 errors.append(problem)
@@ -276,16 +287,30 @@ def check(q, user, target: str, records: list[dict]) -> list[dict]:
                    WHERE m.vehicle_id = %s AND m.service_date = %s AND lower(m.service_type) = lower(%s)""",
                 (values.get('vehicle_id'), values['service_date'], values['service_type']), one=True):
             warnings.append('Looks like a duplicate: same vehicle, date and service is already saved.')
+        if target == 'schedules':
+            if not values.get('time_interval_months') and not values.get('mileage_interval'):
+                errors.append('Say how often: every N months, every N miles (or hours), or both.')
+            for k in ('time_interval_months', 'mileage_interval'):
+                if values.get(k) is not None and values[k] <= 0:
+                    errors.append('How often must be more than 0.')
+            if values.get('vehicle_id') and values.get('maintenance_type') and q(
+                    """SELECT 1 FROM wsb.maintenance_rule WHERE vehicle_id = %s AND lower(maintenance_type) = lower(%s)
+                       AND enabled""", (values['vehicle_id'], values['maintenance_type']), one=True):
+                errors.append(f"This vehicle already has a {values['maintenance_type']} schedule.")
         key = tuple(str(values.get(f.name)) for f in fl)
         if key in seen:
             warnings.append('Same as an earlier row in this file.')
         seen.add(key)
         # Must be unique: a second row with the same tag / email would make the whole save fail.
-        unique = (target == 'vehicles' and tag and ('tag', tag)) or \
+        unique = (target == 'vehicles' and tag and ('tag', tag)) or                  (target == 'schedules' and values.get('vehicle_id') and values.get('maintenance_type') and
+                  ('schedule', values['vehicle_id'], values['maintenance_type'].lower())) or \
                  (target == 'drivers' and values.get('email') and ('email', values['email'].lower()))
         if unique and unique in seen_unique:
-            errors.append(f"{'Property tag' if unique[0] == 'tag' else 'Email'} "
-                          f"{values.get('asset_number') or values.get('email')} is used twice in this file.")
+            if unique[0] == 'schedule':
+                errors.append(f"The {values['maintenance_type']} schedule for this vehicle is in the file twice.")
+            else:
+                errors.append(f"{'Property tag' if unique[0] == 'tag' else 'Email'} "
+                              f"{values.get('asset_number') or values.get('email')} is used twice in this file.")
         if unique:
             seen_unique.add(unique)
         out.append({'raw': raw, 'values': values, 'errors': errors, 'warnings': warnings})
@@ -356,6 +381,11 @@ def save(conn, user, target: str, rows: list[dict]) -> int:
                         raise ValueError(f"{values['driver_email']} is not an approved, active driver.")
                 elif target == 'maintenance':
                     _save_service(cur, values)
+                elif target == 'schedules':
+                    cur.execute("""INSERT INTO wsb.maintenance_rule (vehicle_id, maintenance_type, mileage_interval,
+                                       time_interval_months, last_completed_mileage, last_completed_date)
+                                   VALUES (%(vehicle_id)s, %(maintenance_type)s, %(mileage_interval)s, %(time_interval_months)s,
+                                           %(last_completed_mileage)s, %(last_completed_date)s)""", values)
                 elif target == 'vehicles':
                     v = {k: values.get(k) for k in VEHICLE_COLS}
                     v['status'], v['active'] = 'Available', True
