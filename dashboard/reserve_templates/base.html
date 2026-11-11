@@ -8,6 +8,10 @@
   <meta name="theme-color" content="#004b87">
   <meta name="description" content="Request a vehicle from the FGCU Water School fleet.">
   <link rel="stylesheet" href="{{ asset('style.css') }}">
+  {% if vercel_analytics %}
+  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <script defer src="/_vercel/insights/script.js"></script>
+  {% endif %}
 </head>
 <body class="reserve-site">
 <header class="topbar">

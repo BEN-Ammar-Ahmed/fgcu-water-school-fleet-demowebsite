@@ -54,6 +54,8 @@ def static_url_for(app):
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 365 * 24 * 3600
     app.jinja_env.globals['asset'] = asset
     app.jinja_env.globals['inline_asset'] = inline_asset
+    # Vercel Web Analytics (visitor and page-view counts) only on Vercel; local runs load nothing extra.
+    app.jinja_env.globals['vercel_analytics'] = bool(os.environ.get('VERCEL'))
     # The logo: static/logo.svg unless LOGO_FILE names another file in static/ (e.g. the official FGCU Water School
     # logo from University Marketing). LOGO_WIDE=1 for a wide logo that already contains the words.
     logo = os.environ.get('LOGO_FILE', 'logo.svg').strip() or 'logo.svg'
