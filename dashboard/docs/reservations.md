@@ -144,4 +144,4 @@ writing to the outbox, and whatever sends the emails just needs to read `sent_at
 
 ## Questions for the sponsor
 
-Collected with the other open questions in [`questions-for-regina.md`](questions-for-regina.md).
+Open questions for the client were tracked separately.
